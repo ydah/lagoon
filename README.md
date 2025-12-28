@@ -9,6 +9,7 @@ Lagoon is a Ruby gem that generates Mermaid class diagrams and ER diagrams from 
 - Generate Mermaid class diagrams from ActiveRecord models
 - Generate Mermaid class diagrams from Rails controllers
 - Generate Mermaid ER diagrams from database schema
+- Generate controller-model relationship diagrams showing which models are used in each controller action
 - No external dependencies (no Graphviz required)
 - CLI tool and Rake tasks for easy integration
 - Configurable output options
@@ -50,6 +51,9 @@ lagoon controllers -o doc/controllers.mermaid
 # Generate ER diagram
 lagoon er -o doc/er_diagram.mermaid
 
+# Generate controller-model relationship diagram
+lagoon controller_models -o doc/controller_models.mermaid
+
 # Generate all diagrams
 lagoon all
 
@@ -75,6 +79,7 @@ rake mermaid:all
 rake mermaid:models
 rake mermaid:controllers
 rake mermaid:er
+rake mermaid:controller_models
 
 # Generate brief diagrams
 rake mermaid:brief
@@ -101,6 +106,7 @@ end
 Lagoon.generate_model_diagram
 Lagoon.generate_controller_diagram
 Lagoon.generate_er_diagram
+Lagoon.generate_controller_model_diagram
 
 # Or generate all at once
 Lagoon.generate_all
@@ -151,6 +157,13 @@ Lagoon CLI supports various options:
 - `--hide-public`: Hide public methods
 - `--hide-protected`: Hide protected methods
 - `--hide-private`: Hide private methods
+
+### Controller-Model Relationship Diagrams
+
+- `-e, --exclude`: Exclude specified controllers
+- `-s, --specify`: Only process specified controllers
+- `--show-actions`: Show action names in relationship labels (default: true)
+- `--no-show-actions`: Hide action names in relationship labels
 
 ### Common Options
 
@@ -204,6 +217,42 @@ erDiagram
         int user_id FK
     }
 ```
+
+### Controller-Model Relationship Diagram
+
+```mermaid
+erDiagram
+    %% Controller: UsersController
+    UsersController ||--o{ User : "index, show, create, update, destroy"
+    UsersController ||--o{ Role : "index, show"
+    UsersController ||--o{ Post : "show"
+
+    %% Controller: PostsController
+    PostsController ||--o{ Post : "index, show, create, update, destroy"
+    PostsController ||--o{ User : "show"
+    PostsController ||--o{ Comment : "show"
+```
+
+This diagram shows which models are used in each controller action, helping you understand the data flow in your application.
+
+## Limitations
+
+### Controller-Model Relationship Detection
+
+The controller-model relationship diagram uses static AST analysis with Prism to detect model references in controller actions. While this works well for most common patterns, there are some limitations:
+
+Detectable Patterns:
+- Direct model references: `User.find(params[:id])`, `Post.where(...)`
+- Association method calls: `@user.posts`, `@post.comments`
+- Common helper methods: `current_user`
+
+Non-Detectable Patterns:
+- Dynamic model references: `params[:type].constantize.find(id)`
+- Metaprogramming-generated methods
+- Model usage in service objects or concerns (outside controller scope)
+- Complex data flow requiring runtime analysis
+
+For best results, use explicit model references in your controller actions.
 
 ## Requirements
 

@@ -55,6 +55,18 @@ module Lagoon
       say "ER diagram generated: #{output_file}", :green
     end
 
+    desc "controller_models", "Generate controller-model relationship diagram"
+    method_option :exclude, type: :array, aliases: "-e", desc: "Exclude specified controllers"
+    method_option :specify, type: :array, aliases: "-s", desc: "Only process specified controllers"
+    method_option :show_actions, type: :boolean, default: true, desc: "Show action names in labels"
+    def controller_models
+      load_rails_environment
+      setup_configuration
+
+      output_file = Lagoon.generate_controller_model_diagram(build_options)
+      say "Controller-model diagram generated: #{output_file}", :green
+    end
+
     desc "all", "Generate all diagrams"
     method_option :brief, type: :boolean, aliases: "-b", desc: "Compact diagrams (no attributes/methods)"
     def all
@@ -66,6 +78,7 @@ module Lagoon
       say "  Models: #{results[:models]}", :green
       say "  Controllers: #{results[:controllers]}", :green
       say "  ER: #{results[:er]}", :green
+      say "  Controller-Models: #{results[:controller_models]}", :green
     end
 
     desc "version", "Show version"

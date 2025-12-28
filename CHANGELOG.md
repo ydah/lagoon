@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Added `lagoon controller_models` command to generate controller-model relationship diagrams
+
 ## 0.1.0 - 2025-12-17
 
 - Initial release

@@ -8,6 +8,7 @@ module Lagoon
       def initialize(options = {})
         @options = options
         @config = Lagoon.configuration
+        @analyzer = Lagoon::Analyzer::ActionControllerAnalyzer.new
       end
 
       def parse
@@ -18,8 +19,12 @@ module Lagoon
         controllers.each do |controller|
           next if excluded?(controller)
 
-          classes << parse_controller(controller)
-          relationships.concat(extract_inheritance(controller)) if config.include_inheritance
+          # Use analyzer to extract controller metadata
+          controller_data = @analyzer.analyze_controller(controller, analysis_options)
+          classes << controller_data
+
+          # Use analyzer to extract inheritance
+          relationships.concat(@analyzer.extract_inheritance(controller)) if config.include_inheritance
         end
 
         {
@@ -31,7 +36,7 @@ module Lagoon
       private
 
       def load_controllers
-        # Railsアプリケーションの全コントローラをロード
+        # Load all Rails controllers
         return [] unless defined?(Rails)
 
         Rails.application.eager_load!
@@ -43,51 +48,12 @@ module Lagoon
         config.exclude_controllers.include?(controller_name)
       end
 
-      def parse_controller(controller)
+      def analysis_options
         {
-          name: controller.name,
-          abstract: false,
-          attributes: [],
-          methods: extract_methods(controller)
+          hide_public: options[:hide_public],
+          hide_protected: options[:hide_protected],
+          hide_private: options[:hide_private]
         }
-      end
-
-      def extract_methods(controller)
-        methods = []
-
-        # Public methods
-        unless options[:hide_public]
-          public_methods = controller.action_methods.to_a
-          methods.concat(public_methods.map { |m| { name: m, visibility: "+" } })
-        end
-
-        # Protected methods
-        unless options[:hide_protected]
-          protected_methods = controller.protected_instance_methods(false)
-          methods.concat(protected_methods.map { |m| { name: m, visibility: "#" } })
-        end
-
-        # Private methods
-        unless options[:hide_private]
-          private_methods = controller.private_instance_methods(false)
-          methods.concat(private_methods.map { |m| { name: m, visibility: "-" } })
-        end
-
-        methods
-      end
-
-      def extract_inheritance(controller)
-        return [] if controller.superclass == ActionController::Base
-        return [] unless controller.superclass.name
-
-        [{
-          source: controller.superclass.name,
-          target: controller.name,
-          type: :inheritance,
-          label: nil
-        }]
-      rescue StandardError
-        []
       end
     end
   end

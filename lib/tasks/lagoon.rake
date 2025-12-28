@@ -8,6 +8,7 @@ namespace :mermaid do
     puts "  Models: #{results[:models]}"
     puts "  Controllers: #{results[:controllers]}"
     puts "  ER: #{results[:er]}"
+    puts "  Controller-Models: #{results[:controller_models]}"
   end
 
   desc "Generate Mermaid model diagram"
@@ -28,6 +29,12 @@ namespace :mermaid do
     puts "ER diagram generated: #{output_file}"
   end
 
+  desc "Generate controller-model relationship diagram"
+  task controller_models: :environment do
+    output_file = Lagoon.generate_controller_model_diagram
+    puts "Controller-model diagram generated: #{output_file}"
+  end
+
   desc "Generate brief diagrams (no attributes/methods)"
   task brief: :environment do
     results = Lagoon.generate_all(brief: true)
@@ -35,5 +42,6 @@ namespace :mermaid do
     puts "  Models: #{results[:models]}"
     puts "  Controllers: #{results[:controllers]}"
     puts "  ER: #{results[:er]}"
+    puts "  Controller-Models: #{results[:controller_models]}"
   end
 end

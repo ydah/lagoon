@@ -10,6 +10,7 @@ module Lagoon
       def initialize(options = {})
         @options = options
         @config = Lagoon.configuration
+        @analyzer = Lagoon::Analyzer::DatabaseSchemaAnalyzer.new
       end
 
       def parse
@@ -20,9 +21,12 @@ module Lagoon
         tables.each do |table_name, columns|
           next if excluded?(table_name)
 
-          entity = parse_table(table_name, columns)
+          # Use analyzer to extract table metadata
+          entity = @analyzer.analyze_table(table_name, columns)
           entities << entity
-          relationships.concat(extract_foreign_keys(table_name, columns))
+
+          # Use analyzer to extract foreign key relationships
+          relationships.concat(@analyzer.extract_foreign_keys(table_name, columns))
         end
 
         {
@@ -40,7 +44,7 @@ module Lagoon
         tables_hash = {}
 
         connection.tables.each do |table_name|
-          next if internal_table?(table_name)
+          next if @analyzer.internal_table?(table_name)
 
           columns = connection.columns(table_name)
           tables_hash[table_name] = columns
@@ -49,65 +53,8 @@ module Lagoon
         tables_hash
       end
 
-      def internal_table?(table_name)
-        # Railsの内部テーブルをスキップ
-        %w[schema_migrations ar_internal_metadata].include?(table_name)
-      end
-
       def excluded?(_table_name)
-        false # 必要に応じて除外ロジックを追加
-      end
-
-      def parse_table(table_name, columns)
-        {
-          name: table_name,
-          attributes: columns.map { |col| parse_column(col) }
-        }
-      end
-
-      def parse_column(column)
-        {
-          name: column.name,
-          type: column.type,
-          primary_key: column.name == "id",
-          foreign_key: foreign_key?(column.name),
-          unique: false # 必要に応じて実装
-        }
-      end
-
-      def foreign_key?(column_name)
-        column_name.end_with?("_id")
-      end
-
-      def extract_foreign_keys(table_name, columns)
-        relationships = []
-
-        columns.each do |column|
-          next unless foreign_key?(column.name)
-
-          # column_nameから参照先テーブルを推測 (例: user_id -> users)
-          target_table = infer_target_table(column.name)
-          next unless target_table
-
-          relationships << {
-            source: table_name,
-            target: target_table,
-            label: "has many",
-            source_cardinality: "||",
-            target_cardinality: "}o",
-            identifying: true
-          }
-        end
-
-        relationships
-      end
-
-      def infer_target_table(foreign_key_name)
-        # user_id -> users のように推測
-        base_name = foreign_key_name.sub(/_id$/, "")
-        base_name.pluralize
-      rescue StandardError
-        nil
+        false # Can be enhanced with exclusion logic
       end
     end
   end
