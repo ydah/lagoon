@@ -7,6 +7,16 @@ require_relative "../../../lib/lagoon/parser/controller_model_parser"
 
 RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
   let(:analyzer) { described_class.new }
+  let(:analysis_options) do
+    {
+      model_names: %w[User Role Post Profile Category Comment],
+      associations: {
+        "User" => { "posts" => "Post", "profile" => "Profile" },
+        "Post" => { "comments" => "Comment" }
+      },
+      helper_models: { "current_user" => "User" }
+    }
+  end
 
   describe "Integration with ControllerModelParser" do
     let(:temp_controller_file) { Tempfile.new(["users_controller", ".rb"]) }
@@ -45,7 +55,7 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
       RUBY
       temp_controller_file.rewind
 
-      result = analyzer.analyze(temp_controller_file.path, ["index", "show", "create"])
+      result = analyzer.analyze(temp_controller_file.path, ["index", "show", "create"], **analysis_options)
 
       expect(result["index"].to_a).to match_array(%w[User Role])
       expect(result["show"].to_a).to match_array(%w[User Post Profile])
@@ -66,7 +76,7 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
       RUBY
       temp_controller_file.rewind
 
-      result = analyzer.analyze(temp_controller_file.path, ["index"])
+      result = analyzer.analyze(temp_controller_file.path, ["index"], **analysis_options)
 
       expect(result["index"].to_a).to match_array(%w[Post Category])
     end
@@ -89,7 +99,7 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
       RUBY
       temp_controller_file.rewind
 
-      result = analyzer.analyze(temp_controller_file.path, ["show"])
+      result = analyzer.analyze(temp_controller_file.path, ["show"], **analysis_options)
 
       expect(result["show"].to_a).to include("Post", "Comment", "User")
     end
@@ -108,7 +118,7 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
       RUBY
       temp_controller_file.rewind
 
-      result = analyzer.analyze(temp_controller_file.path, ["home", "about"])
+      result = analyzer.analyze(temp_controller_file.path, ["home", "about"], **analysis_options)
 
       expect(result["home"].to_a).to be_empty
       expect(result["about"].to_a).to be_empty
@@ -170,8 +180,11 @@ RSpec.describe Lagoon::Parser::ControllerModelParser do
     let(:mock_controller) { double("Controller", name: "UsersController") }
 
     context "with global config exclusions" do
-      before do
-        allow(parser.config).to receive(:exclude_controllers).and_return(["AdminController"])
+      let(:parser) do
+        config = Lagoon::Configuration.new
+        config.exclude_controllers = ["AdminController"]
+        options = Lagoon::Options.for(:controller_model, {}, config: config)
+        described_class.new(options)
       end
 
       it "excludes controllers in global config" do
