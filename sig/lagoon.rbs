@@ -1,4 +1,107 @@
 module Lagoon
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  type option_key = Symbol | String
+  type options_hash = Hash[option_key, untyped]
+  type counts_hash = Hash[Symbol, Integer]
+
+  class Error < StandardError
+  end
+
+  class ConfigurationError < Error
+  end
+
+  class RailsLoadError < Error
+  end
+
+  class ParseError < Error
+  end
+
+  class OutputError < Error
+  end
+
+  class Configuration
+    DIRECTIONS: Array[String]
+
+    attr_accessor show_attributes: bool
+    attr_accessor show_methods: bool
+    attr_accessor include_inheritance: bool
+    attr_accessor exclude_models: Array[String]
+    attr_accessor exclude_controllers: Array[String]
+    attr_accessor exclude_tables: Array[String]
+    attr_accessor internal_tables: Array[String]
+    attr_accessor include_framework_bases: bool
+    attr_accessor strict: bool
+    attr_accessor helper_models: Hash[String, String]
+    attr_reader output_dir: String
+    attr_reader diagram_direction: String
+
+    def initialize: () -> void
+    def output_dir=: (String value) -> String
+    def diagram_direction=: (String value) -> String
+    def self.validate_direction!: (String | Symbol value) -> String
+    def initialize_copy: (Configuration original) -> void
+  end
+
+  class Options
+    include Enumerable[[Symbol, untyped]]
+
+    COMMON_KEYS: Array[Symbol]
+    KEYS: Hash[Symbol, Array[Symbol]]
+
+    attr_reader kind: Symbol
+
+    def self.for: (Symbol kind, ?options_hash? raw_options, ?config: Configuration, **untyped keyword_options) -> Options
+    def self.allowed_keys: (Symbol kind) -> Array[Symbol]
+    def initialize: (Symbol kind, ?options_hash raw_options, ?config: Configuration) -> void
+    def []: (option_key key) -> untyped
+    def fetch: (option_key key, *untyped defaults) { (Symbol) -> untyped } -> untyped
+             | (option_key key, *untyped defaults) -> untyped
+    def key?: (option_key key) -> bool
+    def each: () { ([Symbol, untyped]) -> void } -> Options
+    def to_h: () -> Hash[Symbol, untyped]
+  end
+
+  class Result
+    attr_reader path: String
+    attr_reader content: String
+    attr_reader warnings: Array[String]
+    attr_reader counts: counts_hash
+
+    def initialize: (path: String, content: String, ?warnings: Array[String], ?counts: counts_hash) -> void
+    def to_s: () -> String
+    def to_path: () -> String
+  end
+
+  def self.configuration: () -> Configuration
+  def self.configuration=: (Configuration configuration) -> Configuration
+  def self.configure: () { (Configuration) -> untyped } -> untyped
+  def self.reset_configuration!: () -> Configuration
+  def self.generate_model_diagram: (?options_hash options) -> Result
+  def self.generate_controller_diagram: (?options_hash options) -> Result
+  def self.generate_er_diagram: (?options_hash options) -> Result
+  def self.generate_controller_model_diagram: (?options_hash options) -> Result
+  def self.generate_all: (?options_hash options) -> Hash[Symbol, Result]
+
+  module Diagram
+    class Base
+      attr_reader options: Options
+      attr_reader config: Configuration
+
+      def initialize: (?options_hash? options, ?configuration: Configuration, **untyped keyword_options) -> void
+      def generate: () -> Result
+    end
+
+    class ModelDiagram < Base
+    end
+
+    class ControllerDiagram < Base
+    end
+
+    class ErDiagram < Base
+    end
+
+    class ControllerModelDiagram < Base
+    end
+  end
 end

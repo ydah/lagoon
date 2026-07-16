@@ -1,25 +1,149 @@
 name: Ruby
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    name: Ruby ${{ matrix.ruby }}
+    name: Ruby ${{ matrix.ruby }} / ${{ matrix.rails }}
     strategy:
+      fail-fast: false
       matrix:
-        ruby:
-          - '3.4'
+        include:
+          - ruby: "3.2"
+            rails: "6.1"
+            gemfile: gemfiles/rails_6.1.gemfile
+          - ruby: "3.2"
+            rails: "7.0"
+            gemfile: gemfiles/rails_7.0.gemfile
+          - ruby: "3.3"
+            rails: "7.1"
+            gemfile: gemfiles/rails_7.1.gemfile
+          - ruby: "3.3"
+            rails: "7.2"
+            gemfile: gemfiles/rails_7.2.gemfile
+          - ruby: "3.4"
+            rails: "8.0"
+            gemfile: gemfiles/rails_8.0.gemfile
+          - ruby: "3.4"
+            rails: "8.1"
+            gemfile: gemfiles/rails_8.1.gemfile
+          - ruby: "4.0"
+            rails: "8.1"
+            gemfile: gemfiles/rails_8.1.gemfile
+    env:
+      BUNDLE_GEMFILE: ${{ matrix.gemfile }}
+      COVERAGE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           persist-credentials: false
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@8e41b362d2589a22a44c1cfa214b3c83052c195b # v1
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Run the default task
+      - name: Run quality gates
         run: bundle exec rake
+
+  adapters:
+    runs-on: ubuntu-latest
+    name: ${{ matrix.adapter }} integration
+    strategy:
+      fail-fast: false
+      matrix:
+        adapter: [sqlite3, postgresql, mysql2]
+    env:
+      BUNDLE_GEMFILE: gemfiles/adapters.gemfile
+      DB_ADAPTER: ${{ matrix.adapter }}
+      DB_HOST: 127.0.0.1
+      DB_NAME: lagoon_test
+      DB_USER: ${{ matrix.adapter == 'mysql2' && 'root' || 'postgres' }}
+      DB_PASSWORD: ${{ matrix.adapter == 'mysql2' && 'root' || 'postgres' }}
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: lagoon_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: lagoon_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@8e41b362d2589a22a44c1cfa214b3c83052c195b # v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Run adapter integration
+        run: bundle exec rspec spec/integration/rails_application_spec.rb
+
+  mermaid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@8e41b362d2589a22a44c1cfa214b3c83052c195b # v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Install Mermaid CLI
+        run: npm install --global @mermaid-js/mermaid-cli@11.16.0
+      - name: Parse generated diagrams
+        env:
+          MERMAID_CLI: mmdc
+        run: bundle exec rspec spec/integration/mermaid_syntax_spec.rb
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@8e41b362d2589a22a44c1cfa214b3c83052c195b # v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+      - name: Build and install gem
+        run: |
+          bundle exec rake build
+          gem install --local pkg/lagoon-*.gem
+      - name: Smoke test installed gem and signatures
+        run: ruby -e 'require "lagoon"; spec = Gem::Specification.find_by_name("lagoon"); abort unless spec.files.include?("sig/lagoon.rbs")'

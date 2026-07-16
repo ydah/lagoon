@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+if ENV["COVERAGE"]
+  require "simplecov"
+  SimpleCov.start do
+    enable_coverage :branch
+    add_filter "/spec/"
+    minimum_coverage line: 80, branch: 55
+  end
+end
+
 require "lagoon"
 require "lagoon/cli"
 

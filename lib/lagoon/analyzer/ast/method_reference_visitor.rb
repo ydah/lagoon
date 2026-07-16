@@ -4,6 +4,7 @@ module Lagoon
   module Analyzer
     class MethodReferenceVisitor < Prism::Visitor
       def initialize(methods:, model_names:, associations:, helper_models:)
+        super()
         @methods = methods
         @model_names = model_names.map(&:to_s).to_set
         @associations = normalize_associations(associations)

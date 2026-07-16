@@ -63,6 +63,45 @@ RSpec.describe Lagoon::Analyzer::ActiveRecordAnalyzer do
 
       expect(result[:abstract]).to be true
     end
+
+
+    it "extracts declared Ruby methods when show_methods is enabled" do
+      model_class = Class.new do
+        def active?
+          true
+        end
+
+        private
+
+        def normalize!
+          nil
+        end
+      end
+      allow(model_class).to receive_messages(name: "User", abstract_class?: false, table_exists?: false)
+
+      result = analyzer.analyze_model(model_class, show_methods: true)
+
+      expect(result[:methods]).to include(
+        { name: "active?", visibility: "+" },
+        { name: "normalize!", visibility: "-" }
+      )
+    end
+
+    it "does not repeat base table attributes for STI subclasses by default" do
+      base_class = double("BaseClass", table_name: "records")
+      sti_model = double(
+        "StiModel",
+        name: "SpecialRecord",
+        abstract_class?: false,
+        table_exists?: true,
+        base_class: base_class,
+        table_name: "records"
+      )
+
+      result = analyzer.analyze_model(sti_model)
+
+      expect(result[:attributes]).to be_empty
+    end
   end
 
   describe "#extract_associations" do
@@ -139,6 +178,26 @@ RSpec.describe Lagoon::Analyzer::ActiveRecordAnalyzer do
       result = analyzer.extract_associations(mock_model, hide_through: false)
 
       expect(result.size).to eq(1)
+      expect(result.first[:label]).to eq("has_many comments through posts")
+    end
+
+    it "labels polymorphic associations without constantizing a fictional model" do
+      polymorphic = double(
+        "Association",
+        macro: :belongs_to,
+        name: :attachable,
+        options: { polymorphic: true, optional: true }
+      )
+      allow(mock_model).to receive(:reflect_on_all_associations).and_return([polymorphic])
+
+      result = analyzer.extract_associations(mock_model, show_belongs_to: true)
+
+      expect(result.first).to include(
+        target: "Attachable",
+        label: "belongs_to attachable (polymorphic)",
+        target_cardinality: "0..1",
+        polymorphic: true
+      )
     end
 
     it "handles NameError for missing association class" do

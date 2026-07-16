@@ -33,6 +33,7 @@ module Lagoon
     method_option :inheritance, type: :boolean, aliases: "-i", desc: "Include inheritance relationships"
     method_option :exclude, type: :array, aliases: "-e", desc: "Exclude specified controllers"
     method_option :specify, type: :array, aliases: "-s", desc: "Only process specified controllers"
+    method_option :all_controllers, type: :boolean, desc: "Include controllers outside app/controllers"
     method_option :hide_public, type: :boolean, desc: "Hide public methods"
     method_option :hide_protected, type: :boolean, desc: "Hide protected methods"
     method_option :hide_private, type: :boolean, desc: "Hide private methods"
@@ -55,6 +56,7 @@ module Lagoon
     method_option :direction, type: :string, aliases: "-d", desc: "Diagram direction (TB/BT/LR/RL)"
     method_option :exclude, type: :array, aliases: "-e", desc: "Exclude specified controllers"
     method_option :specify, type: :array, aliases: "-s", desc: "Only process specified controllers"
+    method_option :all_controllers, type: :boolean, desc: "Include controllers outside app/controllers"
     method_option :show_actions, type: :boolean, default: true, desc: "Show action names in labels"
     def controller_models
       with_rails_environment do

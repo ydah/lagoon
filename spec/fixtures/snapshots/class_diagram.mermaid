@@ -1,0 +1,12 @@
+classDiagram
+    direction LR
+
+    class Admin_User["Admin::User"] {
+        +String display&quot;name
+        +active?()
+    }
+
+    class Post {
+    }
+
+    Admin_User "1" --> "*" Post : has_many posts

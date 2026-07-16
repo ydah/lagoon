@@ -87,6 +87,22 @@ RSpec.describe Lagoon::Analyzer::ActionControllerAnalyzer do
 
       expect(result[:methods]).to be_empty
     end
+
+    it "marks framework-declared abstract controllers" do
+      abstract_controller = double(
+        "AbstractController",
+        name: "ApplicationController",
+        abstract?: true,
+        action_methods: Set.new,
+        public_instance_methods: [],
+        protected_instance_methods: [],
+        private_instance_methods: []
+      )
+
+      result = analyzer.analyze_controller(abstract_controller)
+
+      expect(result[:abstract]).to be true
+    end
   end
 
   describe "#extract_inheritance" do

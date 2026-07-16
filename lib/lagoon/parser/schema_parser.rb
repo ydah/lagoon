@@ -66,9 +66,10 @@ module Lagoon
       end
 
       def all_connection_pools
-        ActiveRecord::Base.connection_handler.connection_pool_list(:all)
-      rescue ArgumentError
-        ActiveRecord::Base.connection_handler.connection_pool_list
+        handler = ActiveRecord::Base.connection_handler
+        return handler.all_connection_pools if handler.respond_to?(:all_connection_pools)
+
+        handler.connection_pool_list
       end
 
       def normalize_configured_connections(configured)

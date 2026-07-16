@@ -33,7 +33,6 @@ module Lagoon
 
       def extract_foreign_keys(table_name, columns, foreign_keys:, indexes: [], primary_keys: [], table_prefix: nil)
         columns_by_name = columns.to_h { |column| [column.name.to_s, column] }
-        unique_columns = single_column_unique_indexes(indexes)
         primary_key_columns = Array(primary_keys).map(&:to_s)
 
         foreign_keys.filter_map do |foreign_key|
@@ -41,7 +40,7 @@ module Lagoon
           foreign_key_columns = column_names.filter_map { |name| columns_by_name[name] }
           next if foreign_key_columns.empty?
 
-          unique = column_names.size == 1 && unique_columns.include?(column_names.first)
+          unique = unique_foreign_key?(column_names, indexes)
           nullable = foreign_key_columns.any? { |column| column.respond_to?(:null) ? column.null : true }
           identifying = (column_names - primary_key_columns).empty?
 
@@ -66,6 +65,12 @@ module Lagoon
       def single_column_unique_indexes(indexes)
         indexes.select { |index| index.unique && Array(index.columns).size == 1 }
                .map { |index| Array(index.columns).first.to_s }
+      end
+
+      def unique_foreign_key?(column_names, indexes)
+        indexes.any? do |index|
+          index.unique && Array(index.columns).map(&:to_s).sort == column_names.sort
+        end
       end
 
       def qualify_table(table_name, prefix)

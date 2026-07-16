@@ -38,6 +38,13 @@ RSpec.describe Lagoon::Parser::SchemaParser do
     )
   end
 
+  it "shares the semantic cardinality contract with the ER renderer" do
+    parsed = described_class.new(connections: { primary: connection }).parse
+    output = Lagoon::Renderer::ErDiagramRenderer.new.render(parsed)
+
+    expect(output).to include('USERS ||..o{ POSTS : "has many"')
+  end
+
   it "implements exclude and specify" do
     excluded = described_class.new(connections: { primary: connection }, exclude: ["posts"]).parse
     specified = described_class.new(connections: { primary: connection }, specify: ["users"]).parse

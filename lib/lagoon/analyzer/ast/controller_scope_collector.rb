@@ -15,6 +15,7 @@ module Lagoon
       attr_reader :methods
 
       def initialize(controller_names: nil)
+        super()
         @controller_names = Array(controller_names).compact.map(&:to_s).to_set
         @methods = {}
         @callbacks = []

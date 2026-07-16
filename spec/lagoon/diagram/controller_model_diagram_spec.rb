@@ -15,7 +15,7 @@ RSpec.describe Lagoon::Diagram::ControllerModelDiagram do
   let(:temp_dir) { Dir.mktmpdir }
 
   after do
-    FileUtils.rm_rf(temp_dir) if File.exist?(temp_dir)
+    FileUtils.rm_rf(temp_dir)
   end
 
   describe "#default_filename" do

@@ -16,9 +16,8 @@ module Lagoon
         classes = parsed_data.fetch(:classes, []).select { |klass| klass[:name] }
         classes.sort_by { |klass| klass[:name].to_s }.each do |klass|
           output << render_class(klass)
+          output << ""
         end
-
-        output << ""
 
         relationships = parsed_data.fetch(:relationships, []).select { |rel| rel[:source] && rel[:target] }
         relationships.sort_by { |rel| relationship_sort_key(rel) }.each do |rel|
@@ -55,7 +54,6 @@ module Lagoon
         end
 
         lines << "    }"
-        lines << ""
         lines.join("\n")
       end
 

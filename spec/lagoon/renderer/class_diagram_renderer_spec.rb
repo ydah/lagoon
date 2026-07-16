@@ -125,5 +125,19 @@ RSpec.describe Lagoon::Renderer::ClassDiagramRenderer do
       output = renderer.render(data)
       expect(output).to include("Team o-- Player")
     end
+
+    it "can hide attribute types" do
+      data = {
+        classes: [
+          { name: "User", abstract: false, attributes: [{ name: "email", type: :string }], methods: [] }
+        ],
+        relationships: []
+      }
+
+      output = described_class.new(show_types: false).render(data)
+
+      expect(output).to include("+email")
+      expect(output).not_to include("String email")
+    end
   end
 end

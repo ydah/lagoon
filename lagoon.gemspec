@@ -19,19 +19,28 @@ Gem::Specification.new do |spec|
   spec.metadata["rubygems_mfa_required"] = "true"
 
   gemspec = File.basename(__FILE__)
-  tracked_files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true)
+  tracked_files = begin
+    IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
+      ls.readlines("\x0", chomp: true)
+    end
+  rescue Errno::ENOENT
+    []
   end
   tracked_files = Dir.glob("**/*", File::FNM_DOTMATCH).reject { |file| File.directory?(file) } if tracked_files.empty?
   spec.files = tracked_files.reject do |f|
-      (f == gemspec) ||
-        f.start_with?(*%w[Gemfile Gemfile.lock .git/ .gitignore .rspec spec/ .github/ .rubocop.yml])
+    (f == gemspec) ||
+      f.start_with?(*%w[Gemfile Gemfile.lock .git/ .gitignore .rspec spec/ .github/ .rubocop.yml])
   end
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "activesupport", ">= 6.0"
+  spec.add_dependency "activesupport", ">= 6.1"
   spec.add_dependency "prism", ">= 1.0", "< 3"
   spec.add_dependency "thor", "~> 1.0"
+
+  spec.add_development_dependency "actionpack", ">= 6.1"
+  spec.add_development_dependency "activerecord", ">= 6.1"
+  spec.add_development_dependency "railties", ">= 6.1"
+  spec.add_development_dependency "sqlite3", ">= 1.4"
 end

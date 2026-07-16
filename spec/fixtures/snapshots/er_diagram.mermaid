@@ -1,0 +1,9 @@
+erDiagram
+    ACCOUNTS ||..o{ AUDIT_LOGS : "has \"many\""
+
+    ACCOUNTS {
+    }
+
+    AUDIT_LOGS["AUDIT.LOGS"] {
+        string actor_id FK "actor-id"
+    }

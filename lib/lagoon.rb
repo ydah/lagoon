@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "logger"
+require "active_support"
 require_relative "lagoon/version"
 require_relative "lagoon/errors"
 require_relative "lagoon/result"

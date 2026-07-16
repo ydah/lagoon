@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "prism"
-require "set"
 require_relative "ast/controller_scope_collector"
 require_relative "ast/method_reference_visitor"
 
