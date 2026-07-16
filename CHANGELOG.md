@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.0 - 2026-07-16
+
 - Added structured generation results with content, warnings, and counts.
 - Added application-only discovery, strict analysis, configurable current-principal helpers, multi-database ER generation, and atomic output.
 - Fixed all declared CLI and Rake options, including brief, exclude/specify, all-models, hide-magic, and hide-types.
