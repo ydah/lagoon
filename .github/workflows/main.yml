@@ -144,6 +144,6 @@ jobs:
       - name: Build and install gem
         run: |
           bundle exec rake build
-          gem install --local pkg/lagoon-*.gem
+          gem install pkg/lagoon-*.gem
       - name: Smoke test installed gem and signatures
-        run: ruby -e 'require "lagoon"; spec = Gem::Specification.find_by_name("lagoon"); abort unless spec.files.include?("sig/lagoon.rbs")'
+        run: ruby -e 'require "lagoon"; spec = Gem::Specification.find_by_name("lagoon"); abort unless File.file?(File.join(spec.full_gem_path, "sig/lagoon.rbs"))'

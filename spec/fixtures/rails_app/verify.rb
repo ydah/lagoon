@@ -37,13 +37,16 @@ end
 ActiveRecord::Base.establish_connection(database_configuration)
 ActiveRecord::Schema.verbose = false
 ActiveRecord::Schema.define do
-  create_table(:users, force: true) do |table|
+  drop_table :posts, if_exists: true
+  drop_table :users, if_exists: true
+
+  create_table(:users) do |table|
     table.string :email, null: false
     table.timestamps null: false
   end
   add_index :users, :email, unique: true
 
-  create_table(:posts, force: true) do |table|
+  create_table(:posts) do |table|
     table.references :user, null: false, foreign_key: true
     table.string :title, null: false
     table.boolean :published, null: false, default: false
