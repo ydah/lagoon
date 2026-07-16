@@ -18,9 +18,8 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include("erDiagram")
-        expect(result).to include("%% Controller: UsersController")
-        expect(result).to include('UsersController ||--o{ User : "index, show"')
+        expect(result).to include("classDiagram")
+        expect(result).to include("UsersController ..> User : index, show")
       end
 
       it "renders multiple relationships for one controller" do
@@ -34,11 +33,10 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include("erDiagram")
-        expect(result).to include("%% Controller: UsersController")
-        expect(result).to include('UsersController ||--o{ User : "index, show"')
-        expect(result).to include('UsersController ||--o{ Role : "index"')
-        expect(result).to include('UsersController ||--o{ Post : "show"')
+        expect(result).to include("classDiagram")
+        expect(result).to include("UsersController ..> User : index, show")
+        expect(result).to include("UsersController ..> Role : index")
+        expect(result).to include("UsersController ..> Post : show")
       end
 
       it "renders relationships for multiple controllers" do
@@ -52,11 +50,9 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include("%% Controller: UsersController")
-        expect(result).to include("%% Controller: PostsController")
-        expect(result).to include('UsersController ||--o{ User : "index"')
-        expect(result).to include('PostsController ||--o{ Post : "index"')
-        expect(result).to include('PostsController ||--o{ Comment : "show"')
+        expect(result).to include("UsersController ..> User : index")
+        expect(result).to include("PostsController ..> Post : index")
+        expect(result).to include("PostsController ..> Comment : show")
       end
     end
 
@@ -71,7 +67,7 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer_with_actions.render(parsed_data)
 
-        expect(result).to include('"index, show, create"')
+        expect(result).to include("create, index, show")
       end
 
       it "hides action names when show_actions is false" do
@@ -84,7 +80,8 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer_without_actions.render(parsed_data)
 
-        expect(result).to include('UsersController ||--o{ User : ""')
+        expect(result).to include("UsersController ..> User")
+        expect(result).not_to include("User :")
         expect(result).not_to include("index")
         expect(result).not_to include("show")
         expect(result).not_to include("create")
@@ -97,7 +94,7 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to eq("erDiagram")
+        expect(result).to eq("classDiagram\n    direction TB")
       end
 
       it "handles relationships with no actions" do
@@ -109,7 +106,8 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include('UsersController ||--o{ User : ""')
+        expect(result).to include("UsersController ..> User")
+        expect(result).not_to include("User :")
       end
 
       it "handles namespaced controllers" do
@@ -121,8 +119,8 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include("%% Controller: Admin::UsersController")
-        expect(result).to include("Admin::UsersController")
+        expect(result).to include('class Admin_UsersController["Admin::UsersController"]')
+        expect(result).to include("Admin_UsersController ..> User")
       end
 
       it "escapes special characters in controller names" do
@@ -168,12 +166,12 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
 
         result = renderer.render(parsed_data)
 
-        expect(result).to include('"create, destroy, edit, index, new, show, update"')
+        expect(result).to include("create, destroy, edit, index, new, show, update")
       end
     end
 
     describe "output format" do
-      it "generates valid Mermaid ER diagram syntax" do
+      it "generates valid Mermaid class diagram syntax" do
         parsed_data = {
           relationships: [
             { controller: "UsersController", model: "User", actions: ["index", "show"] },
@@ -184,9 +182,9 @@ RSpec.describe Lagoon::Renderer::ControllerModelErRenderer do
         result = renderer.render(parsed_data)
 
         lines = result.split("\n")
-        expect(lines.first).to eq("erDiagram")
-        expect(lines).to include("    %% Controller: UsersController")
-        expect(lines).to include("    %% Controller: PostsController")
+        expect(lines.first).to eq("classDiagram")
+        expect(lines).to include("    UsersController ..> User : index, show")
+        expect(lines).to include("    PostsController ..> Post : index")
       end
     end
   end

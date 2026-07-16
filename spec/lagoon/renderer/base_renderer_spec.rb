@@ -23,7 +23,7 @@ RSpec.describe Lagoon::Renderer::BaseRenderer do
   describe "#escape_class_name" do
     it "escapes class names with special characters" do
       escaped = renderer.send(:escape_class_name, "User::Profile")
-      expect(escaped).to eq("`User::Profile`")
+      expect(escaped).to eq("User_Profile")
     end
 
     it "does not escape simple class names" do

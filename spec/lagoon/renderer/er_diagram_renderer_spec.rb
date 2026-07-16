@@ -29,9 +29,9 @@ RSpec.describe Lagoon::Renderer::ErDiagramRenderer do
             source: "users",
             target: "posts",
             label: "has many",
-            source_cardinality: "||",
-            target_cardinality: "}o",
-            identifying: true
+            source_cardinality: :one,
+            target_cardinality: :zero_or_many,
+            identifying: false
           }
         ]
       }
@@ -41,7 +41,7 @@ RSpec.describe Lagoon::Renderer::ErDiagramRenderer do
       output = renderer.render(parsed_data)
 
       expect(output).to include("erDiagram")
-      expect(output).to match(/USERS.*--.*POSTS/)
+      expect(output).to include('USERS ||..o{ POSTS : "has many"')
       expect(output).to include("USERS {")
       expect(output).to include("int id PK")
       expect(output).to include("string name")
@@ -82,8 +82,8 @@ RSpec.describe Lagoon::Renderer::ErDiagramRenderer do
             source: "users",
             target: "profiles",
             label: "has one",
-            source_cardinality: "||",
-            target_cardinality: "|o",
+            source_cardinality: :one,
+            target_cardinality: :zero_or_one,
             identifying: false
           }
         ]
@@ -95,24 +95,25 @@ RSpec.describe Lagoon::Renderer::ErDiagramRenderer do
   end
 
   describe "#cardinality_symbol" do
-    it "converts '1' to '||'" do
-      expect(renderer.send(:cardinality_symbol, "1")).to eq("||")
+    it "converts :one to '||'" do
+      expect(renderer.send(:cardinality_symbol, :one)).to eq("||")
     end
 
-    it "converts '0..1' to '|o'" do
-      expect(renderer.send(:cardinality_symbol, "0..1")).to eq("|o")
+    it "converts :zero_or_one to 'o|'" do
+      expect(renderer.send(:cardinality_symbol, :zero_or_one)).to eq("o|")
     end
 
-    it "converts '1..*' to '}|'" do
-      expect(renderer.send(:cardinality_symbol, "1..*")).to eq("}|")
+    it "converts :one_or_more to '}|'" do
+      expect(renderer.send(:cardinality_symbol, :one_or_more)).to eq("}|")
     end
 
-    it "converts '*' to '}o'" do
-      expect(renderer.send(:cardinality_symbol, "*")).to eq("}o")
+    it "converts :zero_or_many to 'o{'" do
+      expect(renderer.send(:cardinality_symbol, :zero_or_many)).to eq("o{")
     end
 
-    it "defaults to '||' for unknown cardinality" do
-      expect(renderer.send(:cardinality_symbol, "unknown")).to eq("||")
+    it "rejects unknown cardinality" do
+      expect { renderer.send(:cardinality_symbol, :unknown) }
+        .to raise_error(Lagoon::ConfigurationError, /Unknown ER cardinality/)
     end
   end
 

@@ -1,56 +1,54 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 RSpec.describe Lagoon::Diagram::Base do
-  subject(:diagram) { described_class.new(options) }
+  let(:parser) { instance_double("Parser", parse: { classes: [], relationships: [] }) }
+  let(:renderer) { instance_double("Renderer", render: "classDiagram\n") }
+  let(:diagram_class) do
+    parser_instance = parser
+    renderer_instance = renderer
 
-  let(:options) { {} }
-
-  before do
-    allow(Lagoon).to receive(:configuration).and_return(
-      instance_double(
-        Lagoon::Configuration,
-        output_dir: "spec/fixtures/output"
-      )
-    )
-  end
-
-  describe "#initialize" do
-    it "sets options" do
-      expect(diagram.options).to eq(options)
-    end
-
-    it "sets config from Lagoon.configuration" do
-      expect(diagram.config).to respond_to(:output_dir)
+    Class.new(described_class) do
+      define_method(:diagram_kind) { :model }
+      define_method(:default_filename) { "test.mermaid" }
+      define_method(:parser) { parser_instance }
+      define_method(:renderer) { renderer_instance }
     end
   end
 
-  describe "#generate" do
-    it "raises NotImplementedError" do
-      expect { diagram.generate }.to raise_error(NotImplementedError, "Subclasses must implement #generate")
+  around do |example|
+    Dir.mktmpdir do |directory|
+      @directory = directory
+      example.run
     end
   end
 
-  describe "#default_filename" do
-    it "raises NotImplementedError" do
-      expect { diagram.send(:default_filename) }.to raise_error(NotImplementedError, "Subclasses must implement #default_filename")
-    end
+  let(:configuration) do
+    Lagoon::Configuration.new.tap { |config| config.output_dir = File.join(@directory, "nested") }
+  end
+  let(:diagram) { diagram_class.new({}, configuration: configuration) }
+
+  it "normalizes options and snapshots configuration" do
+    expect(diagram.options).to be_a(Lagoon::Options)
+    expect(diagram.config).to equal(configuration)
   end
 
-  describe "#output_path" do
-    it "combines output_dir and default_filename" do
-      allow(diagram).to receive(:default_filename).and_return("test.mermaid")
-      expect(diagram.send(:output_path)).to eq("spec/fixtures/output/test.mermaid")
-    end
+  it "writes atomically and returns a structured result" do
+    result = diagram.generate
+
+    expect(result).to be_a(Lagoon::Result)
+    expect(result.path).to eq(File.join(@directory, "nested", "test.mermaid"))
+    expect(result.content).to eq("classDiagram\n")
+    expect(File.read(result.path)).to eq(result.content)
   end
 
-  describe "#ensure_output_directory" do
-    it "creates output directory if it doesn't exist" do
-      allow(diagram).to receive(:default_filename).and_return("test.mermaid")
-      allow(FileUtils).to receive(:mkdir_p)
+  it "creates the parent of a custom output path" do
+    path = File.join(@directory, "custom", "deep", "diagram.mermaid")
+    result = diagram_class.new({ output: path }, configuration: configuration).generate
 
-      diagram.send(:ensure_output_directory)
-
-      expect(FileUtils).to have_received(:mkdir_p).with("spec/fixtures/output")
-    end
+    expect(result.path).to eq(path)
+    expect(File).to exist(path)
+    expect(File).not_to exist(configuration.output_dir)
   end
 end

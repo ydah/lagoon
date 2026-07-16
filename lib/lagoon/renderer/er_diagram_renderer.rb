@@ -6,37 +6,38 @@ module Lagoon
       def render(parsed_data)
         output = ["erDiagram"]
 
-        # リレーションシップを先に追加
         if parsed_data[:relationships]&.any?
-          parsed_data[:relationships].each do |rel|
+          parsed_data[:relationships].sort_by { |rel| relationship_sort_key(rel) }.each do |rel|
             output << render_relationship(rel)
           end
           output << ""
         end
 
-        # エンティティ定義を追加
-        parsed_data[:entities].each do |entity|
+        parsed_data.fetch(:entities, []).sort_by { |entity| entity[:name].to_s }.each do |entity|
           output << render_entity(entity)
         end
 
-        output.join("\n")
+        output.join("\n").rstrip
       end
 
       private
 
       def render_entity(entity)
         lines = []
-        entity_name = entity[:name].upcase
+        entity_name = aliased_identifier(entity[:name], uppercase: true)
 
         lines << "    #{entity_name} {"
-        entity[:attributes].each do |attr|
+        entity.fetch(:attributes, []).sort_by { |attr| attr[:name].to_s }.each do |attr|
           type = type_to_er_type(attr[:type])
           constraints = []
           constraints << "PK" if attr[:primary_key]
           constraints << "FK" if attr[:foreign_key]
           constraints << "UK" if attr[:unique]
 
-          line = "        #{type} #{attr[:name]}"
+          line = "        #{safe_identifier(type)} #{safe_identifier(attr[:name])}"
+          if safe_identifier(attr[:name]) != attr[:name].to_s
+            line += " #{mermaid_string(attr[:name])}"
+          end
           line += " #{constraints.join(" ")}" if constraints.any?
           lines << line
         end
@@ -47,33 +48,35 @@ module Lagoon
       end
 
       def render_relationship(rel)
-        source = rel[:source].upcase
-        target = rel[:target].upcase
+        source = safe_identifier(rel[:source], uppercase: true)
+        target = safe_identifier(rel[:target], uppercase: true)
         label = rel[:label]
 
-        # カーディナリティを決定
         source_card = cardinality_symbol(rel[:source_cardinality])
         target_card = cardinality_symbol(rel[:target_cardinality])
 
-        # 関係の種類（識別 or 非識別）
         line_type = rel[:identifying] ? "--" : ".."
 
-        "    #{source} #{source_card}#{line_type}#{target_card} #{target} : \"#{label}\""
+        "    #{source} #{source_card}#{line_type}#{target_card} #{target} : #{mermaid_string(label)}"
       end
 
       def cardinality_symbol(cardinality)
-        case cardinality
-        when "1", "one"
+        case cardinality&.to_sym
+        when :one
           "||"
-        when "0..1", "zero_or_one"
-          "|o"
-        when "1..*", "one_or_more"
+        when :zero_or_one
+          "o|"
+        when :one_or_more
           "}|"
-        when "*", "0..*", "zero_or_more", "many"
-          "}o"
+        when :zero_or_many
+          "o{"
         else
-          "||" # デフォルト
+          raise ConfigurationError, "Unknown ER cardinality: #{cardinality.inspect}"
         end
+      end
+
+      def relationship_sort_key(relationship)
+        %i[source target label].map { |key| relationship[key].to_s }
       end
 
       def type_to_er_type(type)

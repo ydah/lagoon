@@ -9,43 +9,38 @@ module Lagoon
       end
 
       def render(parsed_data)
-        output = ["erDiagram"]
+        output = ["classDiagram", "    direction #{@direction}", ""]
 
         relationships = parsed_data[:relationships] || []
-        return output.join("\n") if relationships.empty?
+        return output.join("\n").rstrip if relationships.empty?
 
-        # Group by controller for cleaner output
-        by_controller = relationships.group_by { |r| r[:controller] }
+        render_classes(output, relationships)
+        output << ""
 
-        by_controller.each do |controller, controller_relationships|
-          output << ""
-          output << "    %% Controller: #{controller}"
-
-          controller_relationships.each do |rel|
-            output << render_relationship(rel)
-          end
+        relationships.sort_by { |rel| [rel[:controller].to_s, rel[:model].to_s] }.each do |rel|
+          output << render_relationship(rel)
         end
 
-        output.join("\n")
+        output.join("\n").rstrip
       end
 
       private
 
       def render_relationship(rel)
-        controller = escape_class_name(rel[:controller])
-        model = escape_class_name(rel[:model])
+        controller = safe_identifier(rel[:controller])
+        model = safe_identifier(rel[:model])
         actions = rel[:actions] || []
+        label = @show_actions && actions.any? ? " : #{escape_label(actions.sort.join(', '))}" : ""
 
-        # Relationship symbol: ||--o{ (controller "uses" models)
-        # In ER diagram notation:
-        # - || means "exactly one" on the controller side
-        # - o{ means "zero or more" on the model side
-        arrow = "||--o{"
+        "    #{controller} ..> #{model}#{label}"
+      end
 
-        # Label with action names if enabled
-        label = @show_actions && actions.any? ? actions.join(", ") : ""
+      def render_classes(output, relationships)
+        controllers = relationships.filter_map { |rel| rel[:controller] }.uniq.sort
+        models = relationships.filter_map { |rel| rel[:model] }.uniq.sort
 
-        "    #{controller} #{arrow} #{model} : \"#{label}\""
+        controllers.each { |name| output << "    class #{aliased_identifier(name)}" }
+        models.each { |name| output << "    class #{aliased_identifier(name)}" }
       end
     end
   end

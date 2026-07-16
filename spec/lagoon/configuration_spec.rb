@@ -32,8 +32,8 @@ RSpec.describe Lagoon::Configuration do
       expect(configuration.exclude_controllers).to eq([])
     end
 
-    it "sets default diagram_format" do
-      expect(configuration.diagram_format).to eq(:class_diagram)
+    it "sets default internal tables" do
+      expect(configuration.internal_tables).to contain_exactly("schema_migrations", "ar_internal_metadata")
     end
   end
 
@@ -73,9 +73,9 @@ RSpec.describe Lagoon::Configuration do
       expect(configuration.exclude_controllers).to eq(["ApplicationController"])
     end
 
-    it "allows setting diagram_format" do
-      configuration.diagram_format = :er_diagram
-      expect(configuration.diagram_format).to eq(:er_diagram)
+    it "rejects invalid directions" do
+      expect { configuration.diagram_direction = "sideways" }
+        .to raise_error(Lagoon::ConfigurationError, /Invalid diagram direction/)
     end
   end
 end

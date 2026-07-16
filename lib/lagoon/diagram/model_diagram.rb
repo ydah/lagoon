@@ -1,27 +1,24 @@
 # frozen_string_literal: true
 
-require "fileutils"
-
 module Lagoon
   module Diagram
     class ModelDiagram < Base
-      def generate
-        parser = Parser::ModelParser.new(@options)
-        parsed_data = parser.parse
+      protected
 
-        renderer = Renderer::ClassDiagramRenderer.new(
-          direction: @options[:direction] || @config.diagram_direction
-        )
-        content = renderer.render(parsed_data)
-
-        output_file = @options[:output] || output_path
-        ensure_output_directory
-        File.write(output_file, content)
-
-        output_file
+      def diagram_kind
+        :model
       end
 
-      protected
+      def parser
+        @parser ||= Parser::ModelParser.new(@options)
+      end
+
+      def renderer
+        @renderer ||= Renderer::ClassDiagramRenderer.new(
+          direction: @options[:direction],
+          show_types: !@options[:hide_types]
+        )
+      end
 
       def default_filename
         "models.mermaid"

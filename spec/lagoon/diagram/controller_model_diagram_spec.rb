@@ -42,12 +42,12 @@ RSpec.describe Lagoon::Diagram::ControllerModelDiagram do
 
       result = diagram_with_output.generate
 
-      expect(result).to eq(output_file)
+      expect(result.path).to eq(output_file)
       expect(File.exist?(output_file)).to be true
 
       content = File.read(output_file)
-      expect(content).to include("erDiagram")
-      expect(content).to include("UsersController ||--o{ User")
+      expect(content).to include("classDiagram")
+      expect(content).to include("UsersController ..> User")
     end
   end
 
@@ -56,9 +56,10 @@ RSpec.describe Lagoon::Diagram::ControllerModelDiagram do
       mock_parser = instance_double(Lagoon::Parser::ControllerModelParser)
       allow(mock_parser).to receive(:parse).and_return({ relationships: [] })
 
-      expect(Lagoon::Parser::ControllerModelParser).to receive(:new)
-        .with(hash_including(exclude: ["AdminController"]))
-        .and_return(mock_parser)
+      expect(Lagoon::Parser::ControllerModelParser).to receive(:new) do |options|
+        expect(options[:exclude]).to eq(["AdminController"])
+        mock_parser
+      end
 
       diagram_with_options = described_class.new(
         output: File.join(temp_dir, "output.mermaid"),
@@ -142,7 +143,7 @@ RSpec.describe Lagoon::Diagram::ControllerModelDiagram do
       diagram_with_output.generate
 
       content = File.read(output_file)
-      expect(content).to start_with("erDiagram")
+      expect(content).to start_with("classDiagram")
       expect(content).to include("UsersController")
       expect(content).to include("PostsController")
       expect(content).to include("User")
@@ -161,7 +162,7 @@ RSpec.describe Lagoon::Diagram::ControllerModelDiagram do
       diagram_with_output = described_class.new(output: output_file)
       result = diagram_with_output.generate
 
-      expect(result).to eq(output_file)
+      expect(result.path).to eq(output_file)
     end
   end
 end
