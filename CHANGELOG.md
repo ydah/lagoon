@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- Added `lagoon controller_models` command to generate controller-model relationship diagrams
+- Added structured generation results with content, warnings, and counts.
+- Added application-only discovery, strict analysis, configurable current-principal helpers, multi-database ER generation, and atomic output.
+- Fixed all declared CLI and Rake options, including brief, exclude/specify, all-models, hide-magic, and hide-types.
+- Fixed ER relationship direction and cardinality using actual foreign key, primary key, unique index, and nullability metadata.
+- Changed controller-model output to UML dependency relationships and expanded AST analysis for callbacks, helper methods, namespaces, local variables, and association chains.
+- Added Prism as a runtime dependency while retaining lazy AST loading.
+- Added Ruby/Rails/adapter CI matrices, end-to-end Rails coverage, Mermaid parser validation, package smoke tests, linting, and RBS validation.
 
 ## 0.1.0 - 2025-12-17
 

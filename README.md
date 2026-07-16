@@ -1,278 +1,194 @@
 # Lagoon
 
-Generate Mermaid diagrams from Rails models and controllers.
-
-Lagoon is a Ruby gem that generates Mermaid class diagrams and ER diagrams from Rails applications, inspired by [RailRoady](https://github.com/preston/railroady). Unlike RailRoady, which outputs DOT/SVG format and depends on Graphviz, Lagoon outputs Mermaid syntax that can be directly displayed on GitHub, GitLab, Notion, and other platforms that support Mermaid.
+Lagoon generates deterministic Mermaid diagrams from Rails models, controllers, and database metadata.
 
 ## Features
 
-- Generate Mermaid class diagrams from ActiveRecord models
-- Generate Mermaid class diagrams from Rails controllers
-- Generate Mermaid ER diagrams from database schema
-- Generate controller-model relationship diagrams showing which models are used in each controller action
-- No external dependencies (no Graphviz required)
-- CLI tool and Rake tasks for easy integration
-- Configurable output options
-- Support for associations, inheritance, and foreign key relationships
+- Active Record model class diagrams with attributes, declared methods, associations, inheritance, STI handling, and polymorphic/through labels
+- Controller class diagrams with declared public, protected, and private methods
+- ER diagrams based on actual primary keys, foreign keys, unique indexes, nullability, and one-to-one constraints
+- Controller-to-model dependency diagrams based on Prism AST analysis
+- Application-only discovery by default, with explicit opt-in for engine and gem classes
+- Atomic file output and structured results containing content, warnings, and counts
+- No external diagram-rendering binary required; Lagoon writes Mermaid source directly
+
+Lagoon depends on the Ruby gems Active Support, Prism, and Thor. A Rails application supplies Active Record and Action Pack.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add Lagoon to your application's Gemfile:
 
 ```ruby
-gem 'lagoon'
+gem "lagoon"
 ```
 
-And then execute:
+Then run:
 
 ```bash
 bundle install
 ```
 
-Or install it yourself as:
+## CLI
+
+Run commands from the Rails application root, or pass `--root PATH`:
 
 ```bash
-gem install lagoon
-```
-
-## Usage
-
-### Command Line Interface
-
-Lagoon provides a CLI tool for generating diagrams:
-
-```bash
-# Generate model class diagram
 lagoon models -o doc/models.mermaid
-
-# Generate controller class diagram
 lagoon controllers -o doc/controllers.mermaid
-
-# Generate ER diagram
 lagoon er -o doc/er_diagram.mermaid
-
-# Generate controller-model relationship diagram
 lagoon controller_models -o doc/controller_models.mermaid
-
-# Generate all diagrams
-lagoon all
-
-# Generate compact diagrams (no attributes/methods)
-lagoon models -b -i
-
-# Specify diagram direction
-lagoon models -d LR  # Left to Right (default: TB - Top to Bottom)
-
-# Show help
-lagoon help models
+lagoon all -o doc/diagrams
 ```
 
-### Rake Tasks
+For `all`, `--output` is a directory. Lagoon writes `models.mermaid`, `controllers.mermaid`, `er_diagram.mermaid`, and `controller_models.mermaid` inside it.
 
-In your Rails application, you can use Rake tasks:
+Useful model options:
 
 ```bash
-# Generate all diagrams
-rake mermaid:all
+lagoon models --brief
+lagoon models --exclude Audit Event --specify User Post
+lagoon models --all-models --show-belongs-to --hide-through
+lagoon models --hide-magic --hide-types
+lagoon models --direction LR --no-inheritance
+```
 
-# Generate specific diagrams
+- `--brief` hides attributes and methods.
+- `--all-models` includes loaded models outside `app/models`; the default is application models only.
+- `--hide-magic` hides `id`, `created_at`, and `updated_at`. They are shown by default.
+- `--all-columns` overrides `--hide-magic`.
+- `--hide-types` keeps attribute names but omits their types.
+
+Controller and ER filtering use the same `--exclude` and `--specify` contract. `--strict` stops at the first analysis error; otherwise supported per-item failures are returned as warnings and generation continues. Use `--verbose` to print warnings and detailed CLI errors.
+
+Controller commands also accept `--all-controllers` to include loaded controllers outside `app/controllers`.
+
+Direction (`TB`, `BT`, `LR`, or `RL`) is exposed only for class-based diagrams: models, controllers, controller-model dependencies, and `all`.
+
+## Rake tasks
+
+The Railtie provides:
+
+```bash
+rake mermaid:all
 rake mermaid:models
 rake mermaid:controllers
 rake mermaid:er
 rake mermaid:controller_models
-
-# Generate brief diagrams
 rake mermaid:brief
 ```
 
-### Programmatic Usage
+`mermaid:brief` passes the same normalized `brief: true` option used by the CLI.
 
-You can also use Lagoon programmatically in your Ruby code:
+## Programmatic API
 
 ```ruby
-require 'lagoon'
+require "lagoon"
 
-# Configure Lagoon
 Lagoon.configure do |config|
   config.output_dir = "doc/diagrams"
   config.diagram_direction = "LR"
   config.show_attributes = true
   config.show_methods = false
   config.include_inheritance = true
-  config.exclude_models = ["ApplicationRecord"]
+  config.exclude_models = ["Audit"]
+  config.exclude_controllers = ["HealthController"]
+  config.exclude_tables = ["solid_queue_jobs"]
+  config.internal_tables = %w[schema_migrations ar_internal_metadata]
+  config.helper_models = {
+    "current_user" => "User",
+    "current_account" => "Account"
+  }
+  config.strict = false
 end
 
-# Generate diagrams
-Lagoon.generate_model_diagram
-Lagoon.generate_controller_diagram
-Lagoon.generate_er_diagram
-Lagoon.generate_controller_model_diagram
+result = Lagoon.generate_model_diagram(
+  output: "doc/models.mermaid",
+  show_methods: true,
+  show_belongs_to: true
+)
 
-# Or generate all at once
-Lagoon.generate_all
+puts result.path
+puts result.content
+warn result.warnings.join("\n")
+p result.counts
 ```
 
-## Configuration Options
+Every generator returns `Lagoon::Result` with `path`, `content`, `warnings`, and `counts`. `Result#to_s` and `Result#to_path` return the output path.
 
-You can configure Lagoon globally or per-diagram:
+Configuration is snapshotted for each generation, so per-call options do not mutate global state. Unknown option keys and invalid directions raise `Lagoon::ConfigurationError`. Use `Lagoon.reset_configuration!` to restore defaults.
+
+`Lagoon.generate_all(output: "doc/diagrams", brief: true)` eager-loads Rails once and returns a hash of four `Lagoon::Result` objects.
+
+### Multiple databases
+
+ER generation discovers the Active Record connection pools. Explicit connections can also be supplied:
 
 ```ruby
-Lagoon.configure do |config|
-  config.output_dir = "doc/diagrams"          # Default: "doc/diagrams"
-  config.diagram_direction = "TB"              # Default: "TB" (Top to Bottom)
-                                               # Options: "TB", "BT", "LR", "RL"
-  config.show_attributes = true                # Default: true
-  config.show_methods = false                  # Default: false
-  config.include_inheritance = true            # Default: true
-  config.exclude_models = []                   # Default: []
-  config.exclude_controllers = []              # Default: []
-  config.diagram_format = :class_diagram       # Default: :class_diagram
-                                               # Options: :class_diagram, :er_diagram
-end
+Lagoon.generate_er_diagram(
+  connections: {
+    primary: ActiveRecord::Base.connection,
+    archive: ArchiveRecord.connection
+  }
+)
 ```
 
-## CLI Options
+When more than one connection is used, entity identifiers are qualified with the connection name.
 
-Lagoon CLI supports various options:
+## Output semantics
 
-### Model Diagrams
+ER relationships are oriented from the referenced table to the table containing the foreign key. For a required, non-unique `posts.user_id` foreign key, Lagoon emits:
 
-- `-b, --brief`: Compact diagram (no attributes/methods)
-- `-i, --inheritance`: Include inheritance relationships
-- `-e, --exclude`: Exclude specified models
-- `-s, --specify`: Only process specified models
-- `-a, --all-models`: Include all models
-- `--show-belongs-to`: Show belongs_to associations
-- `--hide-through`: Hide through associations
-- `--all-columns`: Show all columns
-- `--hide-magic`: Hide magic fields (id, timestamps)
-- `--hide-types`: Hide attribute types
+```mermaid
+erDiagram
+    USERS ||..o{ POSTS : "has many"
+```
 
-### Controller Diagrams
+The dotted line denotes a non-identifying relationship. A foreign key that is part of the child's primary key is emitted as identifying; nullable and unique foreign keys adjust both cardinalities.
 
-- `-b, --brief`: Compact diagram (no methods)
-- `-i, --inheritance`: Include inheritance relationships
-- `-e, --exclude`: Exclude specified controllers
-- `-s, --specify`: Only process specified controllers
-- `--hide-public`: Hide public methods
-- `--hide-protected`: Hide protected methods
-- `--hide-private`: Hide private methods
-
-### Controller-Model Relationship Diagrams
-
-- `-e, --exclude`: Exclude specified controllers
-- `-s, --specify`: Only process specified controllers
-- `--show-actions`: Show action names in relationship labels (default: true)
-- `--no-show-actions`: Hide action names in relationship labels
-
-### Common Options
-
-- `-o, --output`: Output file path
-- `-d, --direction`: Diagram direction (TB/BT/LR/RL)
-- `-r, --root`: Application root path
-- `-v, --verbose`: Enable verbose output
-
-## Output Examples
-
-### Model Class Diagram
+Controller-model output uses UML dependencies rather than ER cardinalities:
 
 ```mermaid
 classDiagram
     direction TB
-
-    class User {
-        +Integer id
-        +String name
-        +String email
-        +DateTime created_at
-    }
-
-    class Post {
-        +Integer id
-        +String title
-        +Text content
-        +Integer user_id
-    }
-
-    User "1" --> "*" Post : has_many posts
+    UsersController ..> User : index, show
+    UsersController ..> Post : show
 ```
 
-### ER Diagram
+## Controller-model analysis
 
-```mermaid
-erDiagram
-    USER ||--o{ POST : "has many"
+Lagoon validates references against loaded `ActiveRecord::Base.descendants` and association reflection. It recognizes:
 
-    USER {
-        int id PK
-        string name
-        string email
-        datetime created_at
-    }
+- direct and namespaced constants, including acronym names
+- standalone model constants
+- instance and local variables
+- block parameters and chained associations
+- `before_action` methods
+- argument-free controller helper/private method calls
+- configurable current-principal helpers such as `current_user`
+- inherited actions and source locations outside the conventional controller path
 
-    POST {
-        int id PK
-        string title
-        text content
-        int user_id FK
-    }
-```
-
-### Controller-Model Relationship Diagram
-
-```mermaid
-erDiagram
-    %% Controller: UsersController
-    UsersController ||--o{ User : "index, show, create, update, destroy"
-    UsersController ||--o{ Role : "index, show"
-    UsersController ||--o{ Post : "show"
-
-    %% Controller: PostsController
-    PostsController ||--o{ Post : "index, show, create, update, destroy"
-    PostsController ||--o{ User : "show"
-    PostsController ||--o{ Comment : "show"
-```
-
-This diagram shows which models are used in each controller action, helping you understand the data flow in your application.
-
-## Limitations
-
-### Controller-Model Relationship Detection
-
-The controller-model relationship diagram uses static AST analysis with Prism to detect model references in controller actions. While this works well for most common patterns, there are some limitations:
-
-Detectable Patterns:
-- Direct model references: `User.find(params[:id])`, `Post.where(...)`
-- Association method calls: `@user.posts`, `@post.comments`
-- Common helper methods: `current_user`
-
-Non-Detectable Patterns:
-- Dynamic model references: `params[:type].constantize.find(id)`
-- Metaprogramming-generated methods
-- Model usage in service objects or concerns (outside controller scope)
-- Complex data flow requiring runtime analysis
-
-For best results, use explicit model references in your controller actions.
+It deliberately ignores arbitrary calls such as `@user.save` and non-model constants such as service objects. Dynamic constantization, metaprogrammed references, and model use hidden behind service objects remain outside static analysis.
 
 ## Requirements
 
-- Ruby >= 3.0.0
-- Rails >= 6.0 (for Rails integration)
+- Ruby 3.2 or newer
+- Rails 6.1 or newer
+
+CI exercises Ruby 3.2 through 4.0, Rails 6.1 through 8.1, and SQLite/PostgreSQL/MySQL schema integrations.
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```bash
+bundle install
+bundle exec rake
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+The default task runs RSpec (including a minimal Rails end-to-end fixture), Ruby syntax compilation, RuboCop lint checks, RBS validation, and gem build. Mermaid CLI parsing runs when `MERMAID_CLI` is set, for example:
 
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/ydah/lagoon.
+```bash
+MERMAID_CLI=mmdc bundle exec rspec spec/integration/mermaid_syntax_spec.rb
+```
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Acknowledgments
-
-Lagoon is inspired by [RailRoady](https://github.com/preston/railroady), which has been a valuable tool for Rails developers for many years.
+Lagoon is available under the [MIT License](LICENSE.txt).
