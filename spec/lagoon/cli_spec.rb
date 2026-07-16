@@ -1,105 +1,128 @@
 # frozen_string_literal: true
 
+require "tmpdir"
+
 RSpec.describe Lagoon::CLI do
-  subject(:cli) { described_class.new }
+  let(:result) do
+    Lagoon::Result.new(path: "doc/diagram.mermaid", content: "classDiagram", warnings: [], counts: {})
+  end
+
+  around do |example|
+    Dir.mktmpdir do |root|
+      FileUtils.mkdir_p(File.join(root, "config"))
+      File.write(File.join(root, "config", "environment.rb"), "# CLI test environment\n")
+      @rails_root = root
+      example.run
+    end
+  end
 
   describe "#version" do
     it "displays version number" do
-      expect { cli.version }.to output(/Lagoon version #{Lagoon::VERSION}/).to_stdout
+      expect { described_class.start(["version"]) }
+        .to output(/Lagoon version #{Lagoon::VERSION}/).to_stdout
     end
   end
 
-  describe "class options" do
-    it "has verbose option" do
-      expect(described_class.class_options[:verbose]).not_to be_nil
-    end
+  describe "models" do
+    it "passes implemented model options without leaking --root" do
+      expect(Lagoon).to receive(:generate_model_diagram).with(
+        hash_including(
+          brief: true,
+          hide_magic: true,
+          hide_types: true,
+          exclude: ["Audit"],
+          specify: ["User"],
+          output: "tmp/model.mermaid"
+        )
+      ).and_return(result)
 
-    it "has output option" do
-      expect(described_class.class_options[:output]).not_to be_nil
-    end
-
-    it "has direction option" do
-      expect(described_class.class_options[:direction]).not_to be_nil
-    end
-
-    it "has root option" do
-      expect(described_class.class_options[:root]).not_to be_nil
-    end
-  end
-
-  describe "models command options" do
-    let(:models_command) { described_class.commands["models"] }
-
-    it "has brief option" do
-      expect(models_command.options[:brief]).not_to be_nil
-    end
-
-    it "has inheritance option" do
-      expect(models_command.options[:inheritance]).not_to be_nil
-    end
-
-    it "has exclude option" do
-      expect(models_command.options[:exclude]).not_to be_nil
-    end
-
-    it "has specify option" do
-      expect(models_command.options[:specify]).not_to be_nil
-    end
-
-    it "has all_models option" do
-      expect(models_command.options[:all_models]).not_to be_nil
-    end
-
-    it "has show_belongs_to option" do
-      expect(models_command.options[:show_belongs_to]).not_to be_nil
-    end
-
-    it "has hide_through option" do
-      expect(models_command.options[:hide_through]).not_to be_nil
+      expect do
+        described_class.start(
+          ["models", "--brief", "--hide-magic", "--hide-types", "--exclude", "Audit",
+           "--specify", "User", "--output", "tmp/model.mermaid", "--root", @rails_root]
+        )
+      end.to output(/Model diagram generated/).to_stdout
     end
   end
 
-  describe "controllers command options" do
-    let(:controllers_command) { described_class.commands["controllers"] }
+  describe "controllers" do
+    it "routes exclude and specify to controller options" do
+      expect(Lagoon).to receive(:generate_controller_diagram).with(
+        hash_including(exclude: ["AdminController"], specify: ["UsersController"], brief: true)
+      ).and_return(result)
 
-    it "has brief option" do
-      expect(controllers_command.options[:brief]).not_to be_nil
-    end
-
-    it "has inheritance option" do
-      expect(controllers_command.options[:inheritance]).not_to be_nil
-    end
-
-    it "has hide_public option" do
-      expect(controllers_command.options[:hide_public]).not_to be_nil
-    end
-
-    it "has hide_protected option" do
-      expect(controllers_command.options[:hide_protected]).not_to be_nil
-    end
-
-    it "has hide_private option" do
-      expect(controllers_command.options[:hide_private]).not_to be_nil
+      expect do
+        described_class.start(
+          ["controllers", "--exclude", "AdminController", "--specify", "UsersController",
+           "--brief", "--root", @rails_root]
+        )
+      end.to output(/Controller diagram generated/).to_stdout
     end
   end
 
-  describe "er command options" do
-    let(:er_command) { described_class.commands["er"] }
+  describe "er" do
+    it "routes table filtering options" do
+      expect(Lagoon).to receive(:generate_er_diagram).with(
+        hash_including(exclude: ["audits"], specify: ["users"])
+      ).and_return(result)
 
-    it "has exclude option" do
-      expect(er_command.options[:exclude]).not_to be_nil
-    end
-
-    it "has specify option" do
-      expect(er_command.options[:specify]).not_to be_nil
+      expect do
+        described_class.start(["er", "--exclude", "audits", "--specify", "users", "--root", @rails_root])
+      end.to output(/ER diagram generated/).to_stdout
     end
   end
 
-  describe "all command options" do
-    let(:all_command) { described_class.commands["all"] }
+  describe "all" do
+    it "treats output as a directory and passes brief through" do
+      results = {
+        models: result,
+        controllers: result,
+        er: result,
+        controller_models: result
+      }
+      expect(Lagoon).to receive(:generate_all).with(
+        hash_including(output: "tmp/diagrams", brief: true, direction: "LR")
+      ).and_return(results)
 
-    it "has brief option" do
-      expect(all_command.options[:brief]).not_to be_nil
+      expect do
+        described_class.start(
+          ["all", "--output", "tmp/diagrams", "--brief", "--direction", "LR", "--root", @rails_root]
+        )
+      end.to output(/All diagrams generated/).to_stdout
+    end
+  end
+
+  describe "Rails environment loading" do
+    it "restores the working directory after generation" do
+      original_directory = Dir.pwd
+
+      Dir.mktmpdir do |root|
+        FileUtils.mkdir_p(File.join(root, "config"))
+        File.write(File.join(root, "config", "environment.rb"), "# test environment\n")
+        cli = described_class.new([], { root: root })
+
+        cli.send(:with_rails_environment) do
+          expect(File.realpath(Dir.pwd)).to eq(File.realpath(root))
+        end
+      end
+
+      expect(Dir.pwd).to eq(original_directory)
+    end
+
+    it "raises Thor::Error instead of exiting when the root is invalid" do
+      cli = described_class.new([], { root: "/missing/rails/application" })
+
+      expect { cli.send(:with_rails_environment) { nil } }
+        .to raise_error(Thor::Error, /Rails application not found/)
+    end
+  end
+
+  describe "option declarations" do
+    it "only exposes direction on diagrams that support it" do
+      expect(described_class.class_options).not_to have_key(:direction)
+      expect(described_class.commands.fetch("models").options).to have_key(:direction)
+      expect(described_class.commands.fetch("controllers").options).to have_key(:direction)
+      expect(described_class.commands.fetch("er").options).not_to have_key(:direction)
     end
   end
 end
