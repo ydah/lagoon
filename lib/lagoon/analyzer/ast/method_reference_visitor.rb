@@ -6,7 +6,7 @@ module Lagoon
       def initialize(methods:, model_names:, associations:, helper_models:)
         super()
         @methods = methods
-        @model_names = model_names.map(&:to_s).to_set
+        @model_names = model_names.to_set(&:to_s)
         @associations = normalize_associations(associations)
         @helper_models = helper_models.to_h.transform_keys(&:to_s).transform_values(&:to_s)
       end
@@ -160,9 +160,9 @@ module Lagoon
         when Prism::ConstantReadNode
           node.name.to_s
         when Prism::ConstantPathNode
-          [constant_path_name(node.parent), node.name.to_s].reject(&:empty?).join("::")
+          [constant_path_name(node.parent), node.name.to_s].reject(&:empty?).join('::')
         else
-          ""
+          ''
         end
       end
     end

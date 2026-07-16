@@ -18,7 +18,7 @@ module Lagoon
       end
 
       def default_filename
-        "controllers.mermaid"
+        'controllers.mermaid'
       end
     end
   end

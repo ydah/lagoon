@@ -183,7 +183,7 @@ bundle install
 bundle exec rake
 ```
 
-The default task runs RSpec (including a minimal Rails end-to-end fixture), Ruby syntax compilation, RuboCop lint checks, RBS validation, and gem build. Mermaid CLI parsing runs when `MERMAID_CLI` is set, for example:
+The default task runs RSpec (including a minimal Rails end-to-end fixture), Ruby syntax compilation, all RuboCop checks, RBS validation, and gem build. Mermaid CLI parsing runs when `MERMAID_CLI` is set, for example:
 
 ```bash
 MERMAID_CLI=mmdc bundle exec rspec spec/integration/mermaid_syntax_spec.rb

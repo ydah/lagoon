@@ -26,7 +26,7 @@ module Lagoon
       def extract_inheritance(controller, include_framework_base: false)
         return [] if controller.superclass == ActionController::Base && !include_framework_base
         return [] unless controller.superclass.name
-        return [] if !include_framework_base && controller.superclass.name.start_with?("ActionController::")
+        return [] if !include_framework_base && controller.superclass.name.start_with?('ActionController::')
 
         [{
           source: controller.superclass.name,
@@ -47,19 +47,19 @@ module Lagoon
         unless options[:hide_public]
           declared_public = controller.public_instance_methods(false).map(&:to_s)
           public_methods = controller.action_methods.to_a.map(&:to_s) & declared_public
-          methods.concat(public_methods.map { |m| { name: m, visibility: "+" } })
+          methods.concat(public_methods.map { |m| { name: m, visibility: '+' } })
         end
 
         # Protected methods
         unless options[:hide_protected]
           protected_methods = controller.protected_instance_methods(false).map(&:to_s)
-          methods.concat(protected_methods.map { |m| { name: m, visibility: "#" } })
+          methods.concat(protected_methods.map { |m| { name: m, visibility: '#' } })
         end
 
         # Private methods
         unless options[:hide_private]
           private_methods = controller.private_instance_methods(false).map(&:to_s)
-          methods.concat(private_methods.map { |m| { name: m, visibility: "-" } })
+          methods.concat(private_methods.map { |m| { name: m, visibility: '-' } })
         end
 
         methods.sort_by { |method| [method[:visibility], method[:name]] }

@@ -47,7 +47,7 @@ module Lagoon
           {
             source: qualify_table(foreign_key.to_table, table_prefix),
             target: table_name,
-            label: unique ? "has one" : "has many",
+            label: unique ? 'has one' : 'has many',
             source_cardinality: nullable ? :zero_or_one : :one,
             target_cardinality: unique ? :zero_or_one : :zero_or_many,
             identifying: identifying,

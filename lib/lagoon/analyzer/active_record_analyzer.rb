@@ -68,13 +68,17 @@ module Lagoon
         return [] if sti_subclass?(model) && !options[:duplicate_sti_attributes]
 
         columns = model.columns
-        columns = columns.reject { |column| magic_field?(column.name) } if options[:hide_magic] && !options[:all_columns]
+        if options[:hide_magic] && !options[:all_columns]
+          columns = columns.reject do |column|
+            magic_field?(column.name)
+          end
+        end
 
         columns.sort_by(&:name).map do |column|
           {
             name: column.name,
             type: column.type,
-            visibility: "+"
+            visibility: '+'
           }
         end
       end
@@ -86,9 +90,9 @@ module Lagoon
       def extract_methods(model, options = {})
         return [] unless options[:show_methods]
 
-        declared_methods(model, :public_instance_methods, "+") +
-          declared_methods(model, :protected_instance_methods, "#") +
-          declared_methods(model, :private_instance_methods, "-")
+        declared_methods(model, :public_instance_methods, '+') +
+          declared_methods(model, :protected_instance_methods, '#') +
+          declared_methods(model, :private_instance_methods, '-')
       end
 
       def build_association(model, assoc, options = {})
@@ -102,9 +106,9 @@ module Lagoon
             type: :association,
             macro: :belongs_to,
             label: association_label(assoc),
-            source_cardinality: "1",
-            target_cardinality: belongs_to_optional?(model, assoc) ? "0..1" : "1",
-            polymorphic: !!assoc.options[:polymorphic]
+            source_cardinality: '1',
+            target_cardinality: belongs_to_optional?(model, assoc) ? '0..1' : '1',
+            polymorphic: !assoc.options[:polymorphic].nil?
           }
         when :has_one
           {
@@ -113,8 +117,8 @@ module Lagoon
             type: :association,
             macro: :has_one,
             label: association_label(assoc),
-            source_cardinality: "1",
-            target_cardinality: "0..1"
+            source_cardinality: '1',
+            target_cardinality: '0..1'
           }
         when :has_many
           {
@@ -123,8 +127,8 @@ module Lagoon
             type: :association,
             macro: :has_many,
             label: association_label(assoc),
-            source_cardinality: "1",
-            target_cardinality: "*"
+            source_cardinality: '1',
+            target_cardinality: '*'
           }
         when :has_and_belongs_to_many
           {
@@ -133,8 +137,8 @@ module Lagoon
             type: :association,
             macro: :has_and_belongs_to_many,
             label: association_label(assoc),
-            source_cardinality: "*",
-            target_cardinality: "*"
+            source_cardinality: '*',
+            target_cardinality: '*'
           }
         end
       rescue NameError
@@ -143,7 +147,7 @@ module Lagoon
 
       def declared_methods(model, query, visibility)
         model.public_send(query, false).select { |name| application_method?(model, name) }
-             .sort_by(&:to_s).map do |name|
+                                       .sort_by(&:to_s).map do |name|
           { name: name.to_s, visibility: visibility }
         end
       end
@@ -159,7 +163,7 @@ module Lagoon
       end
 
       def application_model_file?(source_file)
-        models_path = File.expand_path(File.join(Rails.root.to_s, "app", "models"))
+        models_path = File.expand_path(File.join(Rails.root.to_s, 'app', 'models'))
         File.expand_path(source_file).start_with?("#{models_path}#{File::SEPARATOR}")
       end
 
@@ -172,7 +176,7 @@ module Lagoon
       def association_label(association)
         label = "#{association.macro} #{association.name}"
         label += " through #{association.options[:through]}" if association.options[:through]
-        label += " (polymorphic)" if association.options[:polymorphic]
+        label += ' (polymorphic)' if association.options[:polymorphic]
         label
       end
 
@@ -191,7 +195,7 @@ module Lagoon
       end
 
       def framework_model?(model)
-        model.name.start_with?("ActiveRecord::")
+        model.name.start_with?('ActiveRecord::')
       end
     end
   end

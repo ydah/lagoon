@@ -1,36 +1,36 @@
 # frozen_string_literal: true
 
-require "json"
-require "logger"
-require "pathname"
-require "tmpdir"
-require "active_record"
-require "action_controller"
-require "rails"
-require "lagoon"
+require 'json'
+require 'logger'
+require 'pathname'
+require 'tmpdir'
+require 'active_record'
+require 'action_controller'
+require 'rails'
+require 'lagoon'
 
 FIXTURE_ROOT = Pathname.new(__dir__).freeze
 
 def database_configuration
-  case ENV.fetch("DB_ADAPTER", "sqlite3")
-  when "postgresql"
+  case ENV.fetch('DB_ADAPTER', 'sqlite3')
+  when 'postgresql'
     {
-      adapter: "postgresql",
-      host: ENV.fetch("DB_HOST", "127.0.0.1"),
-      database: ENV.fetch("DB_NAME", "lagoon_test"),
-      username: ENV.fetch("DB_USER", "postgres"),
-      password: ENV.fetch("DB_PASSWORD", "postgres")
+      adapter: 'postgresql',
+      host: ENV.fetch('DB_HOST', '127.0.0.1'),
+      database: ENV.fetch('DB_NAME', 'lagoon_test'),
+      username: ENV.fetch('DB_USER', 'postgres'),
+      password: ENV.fetch('DB_PASSWORD', 'postgres')
     }
-  when "mysql2"
+  when 'mysql2'
     {
-      adapter: "mysql2",
-      host: ENV.fetch("DB_HOST", "127.0.0.1"),
-      database: ENV.fetch("DB_NAME", "lagoon_test"),
-      username: ENV.fetch("DB_USER", "root"),
-      password: ENV.fetch("DB_PASSWORD", "root")
+      adapter: 'mysql2',
+      host: ENV.fetch('DB_HOST', '127.0.0.1'),
+      database: ENV.fetch('DB_NAME', 'lagoon_test'),
+      username: ENV.fetch('DB_USER', 'root'),
+      password: ENV.fetch('DB_PASSWORD', 'root')
     }
   else
-    { adapter: "sqlite3", database: ":memory:" }
+    { adapter: 'sqlite3', database: ':memory:' }
   end
 end
 
@@ -57,27 +57,27 @@ end
 
 Rails.define_singleton_method(:root) { FIXTURE_ROOT }
 
-Dir[FIXTURE_ROOT.join("app/models/*.rb")].each { |file| require file }
-Dir[FIXTURE_ROOT.join("app/controllers/*.rb")].each { |file| require file }
+Dir[FIXTURE_ROOT.join('app/models/*.rb')].each { |file| require file }
+Dir[FIXTURE_ROOT.join('app/controllers/*.rb')].each { |file| require file }
 
 Dir.mktmpdir do |output_directory|
   results = {
     models: Lagoon.generate_model_diagram(
-      output: File.join(output_directory, "models.mermaid"),
+      output: File.join(output_directory, 'models.mermaid'),
       eager_load: false,
       show_methods: true,
       show_belongs_to: true
     ),
     controllers: Lagoon.generate_controller_diagram(
-      output: File.join(output_directory, "controllers.mermaid"),
+      output: File.join(output_directory, 'controllers.mermaid'),
       eager_load: false
     ),
     er: Lagoon.generate_er_diagram(
-      output: File.join(output_directory, "er.mermaid"),
+      output: File.join(output_directory, 'er.mermaid'),
       eager_load: false
     ),
     controller_models: Lagoon.generate_controller_model_diagram(
-      output: File.join(output_directory, "controller_models.mermaid"),
+      output: File.join(output_directory, 'controller_models.mermaid'),
       eager_load: false
     )
   }

@@ -58,11 +58,11 @@ module Lagoon
         rescue ActiveRecord::ConnectionNotEstablished
           nil
         end
-        base = ConnectionEntry.new(name: "primary", connection: ActiveRecord::Base.connection)
+        base = ConnectionEntry.new(name: 'primary', connection: ActiveRecord::Base.connection)
         connections.unshift(base)
         connections.uniq { |entry| entry.connection.object_id }
       rescue NoMethodError
-        [ConnectionEntry.new(name: "primary", connection: ActiveRecord::Base.connection)]
+        [ConnectionEntry.new(name: 'primary', connection: ActiveRecord::Base.connection)]
       end
 
       def all_connection_pools
@@ -160,7 +160,7 @@ module Lagoon
         parts = [config&.name]
         parts << pool.role if pool.respond_to?(:role)
         parts << pool.shard if pool.respond_to?(:shard)
-        parts.compact.map(&:to_s).reject(&:empty?).join("_").then { |name| name.empty? ? "database" : name }
+        parts.compact.map(&:to_s).reject(&:empty?).join('_').then { |name| name.empty? ? 'database' : name }
       end
     end
   end

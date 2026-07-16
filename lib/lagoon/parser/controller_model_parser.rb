@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "logger"
-require "active_support"
-require "active_support/core_ext/string/inflections"
+require 'logger'
+require 'active_support'
+require 'active_support/core_ext/string/inflections'
 
 module Lagoon
   module Parser
@@ -12,7 +12,7 @@ module Lagoon
       def initialize(options = {})
         @options = options.is_a?(Options) ? options : Options.for(:controller_model, options)
         @filter = ApplicationClassFilter.new(
-          directory: "controllers",
+          directory: 'controllers',
           include_all: @options[:all_controllers]
         )
       end
@@ -138,7 +138,7 @@ module Lagoon
       def conventional_source_file(controller)
         return nil unless defined?(Rails) && Rails.respond_to?(:root)
 
-        Rails.root.join("app", "controllers", "#{controller.name.underscore}.rb").to_s
+        Rails.root.join('app', 'controllers', "#{controller.name.underscore}.rb").to_s
       end
 
       def callback_methods(controller)
@@ -158,7 +158,7 @@ module Lagoon
       end
 
       def analyze_source_files(file_paths, action_names, controller_names, model_metadata)
-        require_relative "../analyzer/ast_model_reference_analyzer"
+        require_relative '../analyzer/ast_model_reference_analyzer'
         analyzer = Lagoon::Analyzer::AstModelReferenceAnalyzer.new
         analyzer.analyze(
           file_paths,
@@ -181,13 +181,15 @@ module Lagoon
       def aggregate_relationships(relationships)
         grouped = relationships.group_by { |relationship| [relationship[:controller], relationship[:model]] }
 
-        grouped.map do |(controller, model), items|
+        aggregated = grouped.map do |(controller, model), items|
           {
             controller: controller,
             model: model,
             actions: items.map { |item| item[:action] }.sort.uniq
           }
-        end.sort_by { |relationship| [relationship[:controller], relationship[:model]] }
+        end
+
+        aggregated.sort_by { |relationship| [relationship[:controller], relationship[:model]] }
       end
     end
   end

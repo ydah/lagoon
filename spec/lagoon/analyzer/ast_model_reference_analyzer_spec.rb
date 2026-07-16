@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "spec_helper"
-require "tempfile"
-require_relative "../../../lib/lagoon/analyzer/ast_model_reference_analyzer"
+require 'spec_helper'
+require 'tempfile'
+require_relative '../../../lib/lagoon/analyzer/ast_model_reference_analyzer'
 
 RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
   subject(:analyzer) { described_class.new }
@@ -11,20 +11,20 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
     {
       model_names: %w[User Post Comment Profile Role Admin APIClient SSOUser CRMAccount Admin::User],
       associations: {
-        "User" => { "posts" => "Post", "comments" => "Comment", "profile" => "Profile" },
-        "Post" => { "comments" => "Comment" }
+        'User' => { 'posts' => 'Post', 'comments' => 'Comment', 'profile' => 'Profile' },
+        'Post' => { 'comments' => 'Comment' }
       },
-      helper_models: { "current_user" => "User", "current_account" => "CRMAccount" }
+      helper_models: { 'current_user' => 'User', 'current_account' => 'CRMAccount' }
     }
   end
 
-  describe "#analyze" do
-    let(:temp_file) { Tempfile.new(["controller", ".rb"]) }
+  describe '#analyze' do
+    let(:temp_file) { Tempfile.new(['controller', '.rb']) }
 
     after { temp_file.unlink }
 
-    context "with simple model references" do
-      it "detects User.find" do
+    context 'with simple model references' do
+      it 'detects User.find' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -34,11 +34,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to include("User")
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to include('User')
       end
 
-      it "detects multiple models in one action" do
+      it 'detects multiple models in one action' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -50,11 +50,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to match_array(%w[User Post Role])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to match_array(%w[User Post Role])
       end
 
-      it "detects models only in specified actions" do
+      it 'detects models only in specified actions' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -72,15 +72,15 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show", "index"], **analysis_options)
-        expect(result["show"].to_a).to include("User")
-        expect(result["index"].to_a).to include("Post")
-        expect(result.keys).not_to include("edit")
+        result = analyzer.analyze(temp_file.path, %w[show index], **analysis_options)
+        expect(result['show'].to_a).to include('User')
+        expect(result['index'].to_a).to include('Post')
+        expect(result.keys).not_to include('edit')
       end
     end
 
-    context "with association references" do
-      it "detects association method calls" do
+    context 'with association references' do
+      it 'detects association method calls' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -92,11 +92,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to include("User", "Post", "Comment")
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to include('User', 'Post', 'Comment')
       end
 
-      it "handles singular associations" do
+      it 'handles singular associations' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -107,13 +107,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to include("User", "Profile")
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to include('User', 'Profile')
       end
     end
 
-    context "with helper method references" do
-      it "detects current_user" do
+    context 'with helper method references' do
+      it 'detects current_user' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -123,13 +123,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to include("User", "Post")
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to include('User', 'Post')
       end
     end
 
-    context "with filters" do
-      it "excludes non-model constants" do
+    context 'with filters' do
+      it 'excludes non-model constants' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -142,11 +142,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to eq(["User"])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to eq(['User'])
       end
 
-      it "excludes Rails framework constants" do
+      it 'excludes Rails framework constants' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -158,11 +158,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to eq(["User"])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to eq(['User'])
       end
 
-      it "excludes Application prefix constants" do
+      it 'excludes Application prefix constants' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -173,11 +173,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to eq(["User"])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to eq(['User'])
       end
 
-      it "excludes common controller variables" do
+      it 'excludes common controller variables' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -191,13 +191,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to eq(["User"])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to eq(['User'])
       end
     end
 
-    context "with complex code patterns" do
-      it "detects models in conditionals" do
+    context 'with complex code patterns' do
+      it 'detects models in conditionals' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -211,11 +211,11 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
-        expect(result["show"].to_a).to match_array(%w[Admin User])
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
+        expect(result['show'].to_a).to match_array(%w[Admin User])
       end
 
-      it "detects models in blocks" do
+      it 'detects models in blocks' do
         temp_file.write(<<~RUBY)
           class UsersController
             def index
@@ -229,13 +229,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["index"], **analysis_options)
-        expect(result["index"].to_a).to include("User", "Post", "Comment")
+        result = analyzer.analyze(temp_file.path, ['index'], **analysis_options)
+        expect(result['index'].to_a).to include('User', 'Post', 'Comment')
       end
     end
 
-    context "with empty actions" do
-      it "returns empty set for action with no model references" do
+    context 'with empty actions' do
+      it 'returns empty set for action with no model references' do
         temp_file.write(<<~RUBY)
           class UsersController
             def new
@@ -245,13 +245,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["new"], **analysis_options)
-        expect(result["new"].to_a).to be_empty
+        result = analyzer.analyze(temp_file.path, ['new'], **analysis_options)
+        expect(result['new'].to_a).to be_empty
       end
     end
 
-    context "with no matching actions" do
-      it "returns empty hash when no actions match" do
+    context 'with no matching actions' do
+      it 'returns empty hash when no actions match' do
         temp_file.write(<<~RUBY)
           class UsersController
             def private_method
@@ -261,13 +261,13 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show", "index"], **analysis_options)
+        result = analyzer.analyze(temp_file.path, %w[show index], **analysis_options)
         expect(result).to be_empty
       end
     end
 
-    context "with model validation and data flow" do
-      it "does not turn arbitrary model methods or service constants into models" do
+    context 'with model validation and data flow' do
+      it 'does not turn arbitrary model methods or service constants into models' do
         temp_file.write(<<~RUBY)
           class UsersController
             def update
@@ -284,12 +284,12 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["update"], **analysis_options)
+        result = analyzer.analyze(temp_file.path, ['update'], **analysis_options)
 
-        expect(result["update"].to_a).to eq(["User"])
+        expect(result['update'].to_a).to eq(['User'])
       end
 
-      it "detects namespaced and acronym model constants, including standalone references" do
+      it 'detects namespaced and acronym model constants, including standalone references' do
         temp_file.write(<<~RUBY)
           class UsersController
             def show
@@ -302,12 +302,12 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
 
-        expect(result["show"].to_a).to match_array(%w[Admin::User APIClient SSOUser CRMAccount])
+        expect(result['show'].to_a).to match_array(%w[Admin::User APIClient SSOUser CRMAccount])
       end
 
-      it "tracks local variables, block parameters, and full association chains" do
+      it 'tracks local variables, block parameters, and full association chains' do
         temp_file.write(<<~RUBY)
           class UsersController
             def index
@@ -321,14 +321,14 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["index"], **analysis_options)
+        result = analyzer.analyze(temp_file.path, ['index'], **analysis_options)
 
-        expect(result["index"].to_a).to match_array(%w[User Post Comment])
+        expect(result['index'].to_a).to match_array(%w[User Post Comment])
       end
     end
 
-    context "with callbacks and helper methods" do
-      it "follows before_action and argument-free private helper calls" do
+    context 'with callbacks and helper methods' do
+      it 'follows before_action and argument-free private helper calls' do
         temp_file.write(<<~RUBY)
           class UsersController
             before_action :set_user, only: :show
@@ -352,15 +352,15 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
 
         result = analyzer.analyze(
           temp_file.path,
-          ["show"],
-          controller_names: ["UsersController"],
+          ['show'],
+          controller_names: ['UsersController'],
           **analysis_options
         )
 
-        expect(result["show"].to_a).to match_array(%w[User Post])
+        expect(result['show'].to_a).to match_array(%w[User Post])
       end
 
-      it "uses a configurable helper-to-model mapping" do
+      it 'uses a configurable helper-to-model mapping' do
         temp_file.write(<<~RUBY)
           class AccountsController
             def show
@@ -370,14 +370,14 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
         RUBY
         temp_file.rewind
 
-        result = analyzer.analyze(temp_file.path, ["show"], **analysis_options)
+        result = analyzer.analyze(temp_file.path, ['show'], **analysis_options)
 
-        expect(result["show"].to_a).to eq(["CRMAccount"])
+        expect(result['show'].to_a).to eq(['CRMAccount'])
       end
     end
 
-    context "with source scoping and errors" do
-      it "only analyzes the requested controller class" do
+    context 'with source scoping and errors' do
+      it 'only analyzes the requested controller class' do
         temp_file.write(<<~RUBY)
           class UsersController
             def index
@@ -395,39 +395,39 @@ RSpec.describe Lagoon::Analyzer::AstModelReferenceAnalyzer do
 
         result = analyzer.analyze(
           temp_file.path,
-          ["index"],
-          controller_names: ["UsersController"],
+          ['index'],
+          controller_names: ['UsersController'],
           **analysis_options
         )
 
-        expect(result["index"].to_a).to eq(["User"])
+        expect(result['index'].to_a).to eq(['User'])
       end
 
-      it "combines reopened class definitions from multiple files" do
-        second_file = Tempfile.new(["controller_extension", ".rb"])
-        temp_file.write("class UsersController; def index; load_user; end; end")
+      it 'combines reopened class definitions from multiple files' do
+        second_file = Tempfile.new(['controller_extension', '.rb'])
+        temp_file.write('class UsersController; def index; load_user; end; end')
         temp_file.rewind
-        second_file.write("class UsersController; def load_user; User.first; end; end")
+        second_file.write('class UsersController; def load_user; User.first; end; end')
         second_file.rewind
 
         result = analyzer.analyze(
           [temp_file.path, second_file.path],
-          ["index"],
-          controller_names: ["UsersController"],
+          ['index'],
+          controller_names: ['UsersController'],
           **analysis_options
         )
 
-        expect(result["index"].to_a).to eq(["User"])
+        expect(result['index'].to_a).to eq(['User'])
       ensure
         second_file&.unlink
       end
 
-      it "raises a dedicated parse error for invalid Ruby" do
-        temp_file.write("class UsersController; def show(")
+      it 'raises a dedicated parse error for invalid Ruby' do
+        temp_file.write('class UsersController; def show(')
         temp_file.rewind
 
         expect do
-          analyzer.analyze(temp_file.path, ["show"], **analysis_options)
+          analyzer.analyze(temp_file.path, ['show'], **analysis_options)
         end.to raise_error(Lagoon::ParseError, /Syntax error/)
       end
     end

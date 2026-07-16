@@ -1,30 +1,30 @@
 # frozen_string_literal: true
 
-require "logger"
-require "active_support"
-require_relative "lagoon/version"
-require_relative "lagoon/errors"
-require_relative "lagoon/result"
-require_relative "lagoon/configuration"
-require_relative "lagoon/options"
-require_relative "lagoon/diagram/base"
-require_relative "lagoon/diagram/model_diagram"
-require_relative "lagoon/diagram/controller_diagram"
-require_relative "lagoon/diagram/er_diagram"
-require_relative "lagoon/diagram/controller_model_diagram"
-require_relative "lagoon/analyzer/active_record_analyzer"
-require_relative "lagoon/analyzer/action_controller_analyzer"
-require_relative "lagoon/analyzer/database_schema_analyzer"
-require_relative "lagoon/parser/application_class_filter"
-require_relative "lagoon/parser/model_parser"
-require_relative "lagoon/parser/controller_parser"
-require_relative "lagoon/parser/schema_parser"
-require_relative "lagoon/parser/controller_model_parser"
-require_relative "lagoon/renderer/base_renderer"
-require_relative "lagoon/renderer/class_diagram_renderer"
-require_relative "lagoon/renderer/er_diagram_renderer"
-require_relative "lagoon/renderer/controller_model_er_renderer"
-require_relative "lagoon/railtie" if defined?(Rails::Railtie)
+require 'logger'
+require 'active_support'
+require_relative 'lagoon/version'
+require_relative 'lagoon/errors'
+require_relative 'lagoon/result'
+require_relative 'lagoon/configuration'
+require_relative 'lagoon/options'
+require_relative 'lagoon/diagram/base'
+require_relative 'lagoon/diagram/model_diagram'
+require_relative 'lagoon/diagram/controller_diagram'
+require_relative 'lagoon/diagram/er_diagram'
+require_relative 'lagoon/diagram/controller_model_diagram'
+require_relative 'lagoon/analyzer/active_record_analyzer'
+require_relative 'lagoon/analyzer/action_controller_analyzer'
+require_relative 'lagoon/analyzer/database_schema_analyzer'
+require_relative 'lagoon/parser/application_class_filter'
+require_relative 'lagoon/parser/model_parser'
+require_relative 'lagoon/parser/controller_parser'
+require_relative 'lagoon/parser/schema_parser'
+require_relative 'lagoon/parser/controller_model_parser'
+require_relative 'lagoon/renderer/base_renderer'
+require_relative 'lagoon/renderer/class_diagram_renderer'
+require_relative 'lagoon/renderer/er_diagram_renderer'
+require_relative 'lagoon/renderer/controller_model_er_renderer'
+require_relative 'lagoon/railtie' if defined?(Rails::Railtie)
 
 module Lagoon
   class << self
@@ -65,13 +65,13 @@ module Lagoon
       output_dir = raw_options.delete(:output)
 
       {
-        models: generate_model_diagram(options_for(:model, raw_options, output_dir, "models.mermaid")),
+        models: generate_model_diagram(options_for(:model, raw_options, output_dir, 'models.mermaid')),
         controllers: generate_controller_diagram(
-          options_for(:controller, raw_options, output_dir, "controllers.mermaid")
+          options_for(:controller, raw_options, output_dir, 'controllers.mermaid')
         ),
-        er: generate_er_diagram(options_for(:er, raw_options, output_dir, "er_diagram.mermaid")),
+        er: generate_er_diagram(options_for(:er, raw_options, output_dir, 'er_diagram.mermaid')),
         controller_models: generate_controller_model_diagram(
-          options_for(:controller_model, raw_options, output_dir, "controller_models.mermaid")
+          options_for(:controller_model, raw_options, output_dir, 'controller_models.mermaid')
         )
       }
     end
@@ -91,7 +91,7 @@ module Lagoon
     end
 
     def options_for(kind, options, output_dir, filename)
-      selected = options.select { |key, _value| Options.allowed_keys(kind).include?(key) }
+      selected = options.slice(*Options.allowed_keys(kind))
       selected[:eager_load] = false
       selected[:output] = File.join(output_dir.to_s, filename) if output_dir
       selected

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "logger"
-require "active_support"
-require "active_support/core_ext/string/inflections"
+require 'logger'
+require 'active_support'
+require 'active_support/core_ext/string/inflections'
 
 module Lagoon
   module Parser
@@ -12,7 +12,7 @@ module Lagoon
       def initialize(options = {})
         @options = options.is_a?(Options) ? options : Options.for(:model, options)
         @analyzer = Lagoon::Analyzer::ActiveRecordAnalyzer.new
-        @filter = ApplicationClassFilter.new(directory: "models", include_all: @options[:all_models])
+        @filter = ApplicationClassFilter.new(directory: 'models', include_all: @options[:all_models])
       end
 
       def parse
@@ -86,9 +86,12 @@ module Lagoon
       end
 
       def deduplicate_relationships(relationships)
-        relationships.group_by { |relationship| relationship_key(relationship) }.values.map do |duplicates|
+        grouped = relationships.group_by { |relationship| relationship_key(relationship) }
+        deduplicated = grouped.values.map do |duplicates|
           duplicates.min_by { |relationship| relationship[:macro] == :belongs_to ? 1 : 0 }
-        end.sort_by { |relationship| relationship_key(relationship) }
+        end
+
+        deduplicated.sort_by { |relationship| relationship_key(relationship) }
       end
 
       def relationship_key(relationship)

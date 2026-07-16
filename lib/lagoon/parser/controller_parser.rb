@@ -8,7 +8,7 @@ module Lagoon
       def initialize(options = {})
         @options = options.is_a?(Options) ? options : Options.for(:controller, options)
         @analyzer = Lagoon::Analyzer::ActionControllerAnalyzer.new
-        @filter = ApplicationClassFilter.new(directory: "controllers", include_all: @options[:all_controllers])
+        @filter = ApplicationClassFilter.new(directory: 'controllers', include_all: @options[:all_controllers])
       end
 
       def parse

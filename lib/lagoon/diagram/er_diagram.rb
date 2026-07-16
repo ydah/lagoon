@@ -18,7 +18,7 @@ module Lagoon
       end
 
       def default_filename
-        "er_diagram.mermaid"
+        'er_diagram.mermaid'
       end
     end
   end

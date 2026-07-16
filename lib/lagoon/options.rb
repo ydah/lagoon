@@ -45,16 +45,16 @@ module Lagoon
       @values[key.to_sym]
     end
 
-    def fetch(key, *defaults, &block)
-      @values.fetch(key.to_sym, *defaults, &block)
+    def fetch(key, *defaults, &)
+      @values.fetch(key.to_sym, *defaults, &)
     end
 
     def key?(key)
       @values.key?(key.to_sym)
     end
 
-    def each(&block)
-      @values.each(&block)
+    def each(&)
+      @values.each(&)
     end
 
     def to_h
@@ -64,9 +64,7 @@ module Lagoon
     private
 
     def symbolize_keys(raw_options)
-      raw_options.to_h.each_with_object({}) do |(key, value), result|
-        result[key.to_sym] = value
-      end
+      raw_options.to_h.transform_keys(&:to_sym)
     end
 
     def validate_keys!
@@ -176,7 +174,7 @@ module Lagoon
       return nil if path.nil?
 
       value = path.to_s
-      raise ConfigurationError, "Output path cannot be empty" if value.empty?
+      raise ConfigurationError, 'Output path cannot be empty' if value.empty?
 
       value.freeze
     end

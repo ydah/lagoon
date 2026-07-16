@@ -4,13 +4,13 @@ module Lagoon
   module Renderer
     class ErDiagramRenderer < BaseRenderer
       def render(parsed_data)
-        output = ["erDiagram"]
+        output = ['erDiagram']
 
         if parsed_data[:relationships]&.any?
           parsed_data[:relationships].sort_by { |rel| relationship_sort_key(rel) }.each do |rel|
             output << render_relationship(rel)
           end
-          output << ""
+          output << ''
         end
 
         parsed_data.fetch(:entities, []).sort_by { |entity| entity[:name].to_s }.each do |entity|
@@ -30,17 +30,17 @@ module Lagoon
         entity.fetch(:attributes, []).sort_by { |attr| attr[:name].to_s }.each do |attr|
           type = type_to_er_type(attr[:type])
           constraints = []
-          constraints << "PK" if attr[:primary_key]
-          constraints << "FK" if attr[:foreign_key]
-          constraints << "UK" if attr[:unique]
+          constraints << 'PK' if attr[:primary_key]
+          constraints << 'FK' if attr[:foreign_key]
+          constraints << 'UK' if attr[:unique]
 
           line = "        #{safe_identifier(type)} #{safe_identifier(attr[:name])}"
           line += " #{constraints.join(',')}" if constraints.any?
           line += " #{mermaid_string(attr[:name])}" if safe_identifier(attr[:name]) != attr[:name].to_s
           lines << line
         end
-        lines << "    }"
-        lines << ""
+        lines << '    }'
+        lines << ''
 
         lines.join("\n")
       end
@@ -53,7 +53,7 @@ module Lagoon
         source_card = cardinality_symbol(rel[:source_cardinality])
         target_card = cardinality_symbol(rel[:target_cardinality])
 
-        line_type = rel[:identifying] ? "--" : ".."
+        line_type = rel[:identifying] ? '--' : '..'
 
         "    #{source} #{source_card}#{line_type}#{target_card} #{target} : #{mermaid_string(label)}"
       end
@@ -61,13 +61,13 @@ module Lagoon
       def cardinality_symbol(cardinality)
         case cardinality&.to_sym
         when :one
-          "||"
+          '||'
         when :zero_or_one
-          "o|"
+          'o|'
         when :one_or_more
-          "}|"
+          '}|'
         when :zero_or_many
-          "o{"
+          'o{'
         else
           raise ConfigurationError, "Unknown ER cardinality: #{cardinality.inspect}"
         end
@@ -81,25 +81,25 @@ module Lagoon
         # Ruby/Rails型をERダイアグラム用の型に変換
         case type.to_s.downcase
         when /integer/, /bigint/
-          "int"
+          'int'
         when /string/, /varchar/
-          "string"
+          'string'
         when /text/
-          "text"
+          'text'
         when /boolean/
-          "boolean"
+          'boolean'
         when /datetime/, /timestamp/
-          "datetime"
+          'datetime'
         when /date/
-          "date"
+          'date'
         when /time/
-          "time"
+          'time'
         when /decimal/, /numeric/
-          "decimal"
+          'decimal'
         when /float/, /double/
-          "float"
+          'float'
         when /json/, /jsonb/
-          "json"
+          'json'
         else
           type.to_s.downcase
         end

@@ -3,20 +3,20 @@
 module Lagoon
   module Renderer
     class ClassDiagramRenderer < BaseRenderer
-      def initialize(direction: "TB", show_types: true)
+      def initialize(direction: 'TB', show_types: true)
         super(direction: direction)
         @show_types = show_types
       end
 
       def render(parsed_data)
-        output = ["classDiagram"]
+        output = ['classDiagram']
         output << "    direction #{@direction}"
-        output << ""
+        output << ''
 
         classes = parsed_data.fetch(:classes, []).select { |klass| klass[:name] }
         classes.sort_by { |klass| klass[:name].to_s }.each do |klass|
           output << render_class(klass)
-          output << ""
+          output << ''
         end
 
         relationships = parsed_data.fetch(:relationships, []).select { |rel| rel[:source] && rel[:target] }
@@ -34,26 +34,26 @@ module Lagoon
         class_name = aliased_identifier(klass[:name])
 
         lines << "    class #{class_name} {"
-        lines << "        <<abstract>>" if klass[:abstract]
+        lines << '        <<abstract>>' if klass[:abstract]
 
         if klass[:attributes]&.any?
           klass[:attributes].sort_by { |attr| attr[:name].to_s }.each do |attr|
-            visibility = attr[:visibility] || "+"
+            visibility = attr[:visibility] || '+'
             type = type_to_mermaid(attr[:type])
-            prefix = @show_types ? "#{type} " : ""
+            prefix = @show_types ? "#{type} " : ''
             lines << "        #{visibility}#{prefix}#{escape_member(attr[:name])}"
           end
         end
 
         if klass[:methods]&.any?
           klass[:methods].sort_by { |method| [method[:visibility].to_s, method[:name].to_s] }.each do |method|
-            visibility = method[:visibility] || "+"
-            return_type = method[:return_type] ? " #{type_to_mermaid(method[:return_type])}" : ""
+            visibility = method[:visibility] || '+'
+            return_type = method[:return_type] ? " #{type_to_mermaid(method[:return_type])}" : ''
             lines << "        #{visibility}#{escape_member(method[:name])}()#{return_type}"
           end
         end
 
-        lines << "    }"
+        lines << '    }'
         lines.join("\n")
       end
 
@@ -67,17 +67,17 @@ module Lagoon
 
         arrow = case type
                 when :inheritance
-                  "<|--"
+                  '<|--'
                 when :composition
-                  "*--"
+                  '*--'
                 when :aggregation
-                  "o--"
+                  'o--'
                 when :association
-                  "-->"
+                  '-->'
                 when :dependency
-                  "..>"
+                  '..>'
                 else
-                  "--"
+                  '--'
                 end
 
         line = "    #{source}"

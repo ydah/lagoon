@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "fileutils"
-require "tempfile"
+require 'fileutils'
+require 'tempfile'
 
 module Lagoon
   module Diagram
@@ -33,19 +33,19 @@ module Lagoon
       end
 
       def diagram_kind
-        raise NotImplementedError, "Subclasses must implement #diagram_kind"
+        raise NotImplementedError, 'Subclasses must implement #diagram_kind'
       end
 
       def parser
-        raise NotImplementedError, "Subclasses must implement #parser"
+        raise NotImplementedError, 'Subclasses must implement #parser'
       end
 
       def renderer
-        raise NotImplementedError, "Subclasses must implement #renderer"
+        raise NotImplementedError, 'Subclasses must implement #renderer'
       end
 
       def default_filename
-        raise NotImplementedError, "Subclasses must implement #default_filename"
+        raise NotImplementedError, 'Subclasses must implement #default_filename'
       end
 
       def ensure_output_directory
@@ -54,7 +54,7 @@ module Lagoon
 
       def write_to_file(content)
         ensure_output_directory
-        Tempfile.create([".lagoon", ".tmp"], File.dirname(output_path)) do |file|
+        Tempfile.create(['.lagoon', '.tmp'], File.dirname(output_path)) do |file|
           file.write(content)
           file.flush
           file.fsync

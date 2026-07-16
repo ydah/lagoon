@@ -4,18 +4,18 @@ module Lagoon
   module Renderer
     class ControllerModelErRenderer < BaseRenderer
       def initialize(options = {})
-        super(direction: options[:direction] || "TB")
+        super(direction: options[:direction] || 'TB')
         @show_actions = options.fetch(:show_actions, true)
       end
 
       def render(parsed_data)
-        output = ["classDiagram", "    direction #{@direction}", ""]
+        output = ['classDiagram', "    direction #{@direction}", '']
 
         relationships = parsed_data[:relationships] || []
         return output.join("\n").rstrip if relationships.empty?
 
         render_classes(output, relationships)
-        output << ""
+        output << ''
 
         relationships.sort_by { |rel| [rel[:controller].to_s, rel[:model].to_s] }.each do |rel|
           output << render_relationship(rel)
@@ -30,7 +30,7 @@ module Lagoon
         controller = safe_identifier(rel[:controller])
         model = safe_identifier(rel[:model])
         actions = rel[:actions] || []
-        label = @show_actions && actions.any? ? " : #{escape_label(actions.sort.join(', '))}" : ""
+        label = @show_actions && actions.any? ? " : #{escape_label(actions.sort.join(', '))}" : ''
 
         "    #{controller} ..> #{model}#{label}"
       end

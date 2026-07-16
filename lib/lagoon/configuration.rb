@@ -11,8 +11,8 @@ module Lagoon
     attr_reader :output_dir, :diagram_direction
 
     def initialize
-      self.output_dir = "doc/diagrams"
-      self.diagram_direction = "TB"
+      self.output_dir = 'doc/diagrams'
+      self.diagram_direction = 'TB'
       @show_attributes = true
       @show_methods = false
       @include_inheritance = true
@@ -22,12 +22,12 @@ module Lagoon
       @internal_tables = %w[schema_migrations ar_internal_metadata]
       @include_framework_bases = false
       @strict = false
-      @helper_models = { "current_user" => "User" }
+      @helper_models = { 'current_user' => 'User' }
     end
 
     def output_dir=(value)
       path = value.to_s
-      raise ConfigurationError, "Output directory cannot be empty" if path.empty?
+      raise ConfigurationError, 'Output directory cannot be empty' if path.empty?
 
       @output_dir = path
     end

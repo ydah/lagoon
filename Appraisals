@@ -1,39 +1,39 @@
 # frozen_string_literal: true
 
-appraise "rails-6.1" do
-  gem "actionpack", "~> 6.1.0"
-  gem "activerecord", "~> 6.1.0"
-  gem "railties", "~> 6.1.0"
-  gem "sqlite3", "~> 1.4"
+appraise 'rails-6.1' do
+  gem 'actionpack', '~> 6.1.0'
+  gem 'activerecord', '~> 6.1.0'
+  gem 'railties', '~> 6.1.0'
+  gem 'sqlite3', '~> 1.4'
 end
 
-appraise "rails-7.0" do
-  gem "actionpack", "~> 7.0.0"
-  gem "activerecord", "~> 7.0.0"
-  gem "railties", "~> 7.0.0"
-  gem "sqlite3", "~> 1.4"
+appraise 'rails-7.0' do
+  gem 'actionpack', '~> 7.0.0'
+  gem 'activerecord', '~> 7.0.0'
+  gem 'railties', '~> 7.0.0'
+  gem 'sqlite3', '~> 1.4'
 end
 
-appraise "rails-7.1" do
-  gem "actionpack", "~> 7.1.0"
-  gem "activerecord", "~> 7.1.0"
-  gem "railties", "~> 7.1.0"
+appraise 'rails-7.1' do
+  gem 'actionpack', '~> 7.1.0'
+  gem 'activerecord', '~> 7.1.0'
+  gem 'railties', '~> 7.1.0'
 end
 
-appraise "rails-7.2" do
-  gem "actionpack", "~> 7.2.0"
-  gem "activerecord", "~> 7.2.0"
-  gem "railties", "~> 7.2.0"
+appraise 'rails-7.2' do
+  gem 'actionpack', '~> 7.2.0'
+  gem 'activerecord', '~> 7.2.0'
+  gem 'railties', '~> 7.2.0'
 end
 
-appraise "rails-8.0" do
-  gem "actionpack", "~> 8.0.0"
-  gem "activerecord", "~> 8.0.0"
-  gem "railties", "~> 8.0.0"
+appraise 'rails-8.0' do
+  gem 'actionpack', '~> 8.0.0'
+  gem 'activerecord', '~> 8.0.0'
+  gem 'railties', '~> 8.0.0'
 end
 
-appraise "rails-8.1" do
-  gem "actionpack", "~> 8.1.0"
-  gem "activerecord", "~> 8.1.0"
-  gem "railties", "~> 8.1.0"
+appraise 'rails-8.1' do
+  gem 'actionpack', '~> 8.1.0'
+  gem 'activerecord', '~> 8.1.0'
+  gem 'railties', '~> 8.1.0'
 end

@@ -21,7 +21,7 @@ module Lagoon
       end
 
       def default_filename
-        "models.mermaid"
+        'models.mermaid'
       end
     end
   end

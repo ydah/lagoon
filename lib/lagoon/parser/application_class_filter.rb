@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "logger"
-require "active_support"
-require "active_support/core_ext/string/inflections"
+require 'logger'
+require 'active_support'
+require 'active_support/core_ext/string/inflections'
 
 module Lagoon
   module Parser
@@ -17,7 +17,7 @@ module Lagoon
         return true if @include_all
         return true unless defined?(Rails) && Rails.respond_to?(:root)
 
-        application_directory = File.expand_path(File.join(Rails.root.to_s, "app", @directory))
+        application_directory = File.expand_path(File.join(Rails.root.to_s, 'app', @directory))
         source_locations(klass).any? do |location|
           File.expand_path(location).start_with?("#{application_directory}#{File::SEPARATOR}")
         end

@@ -16,7 +16,7 @@ module Lagoon
 
       def initialize(controller_names: nil)
         super()
-        @controller_names = Array(controller_names).compact.map(&:to_s).to_set
+        @controller_names = Array(controller_names).compact.to_set(&:to_s)
         @methods = {}
         @callbacks = []
         @namespace = []
@@ -53,9 +53,9 @@ module Lagoon
 
       def qualified_name(node)
         path = constant_path_name(node)
-        return path if path.include?("::") || @namespace.empty?
+        return path if path.include?('::') || @namespace.empty?
 
-        [*@namespace, path].join("::")
+        [*@namespace, path].join('::')
       end
 
       def constant_path_name(node)
@@ -63,9 +63,9 @@ module Lagoon
         when Prism::ConstantReadNode
           node.name.to_s
         when Prism::ConstantPathNode
-          [constant_path_name(node.parent), node.name.to_s].reject(&:empty?).join("::")
+          [constant_path_name(node.parent), node.name.to_s].reject(&:empty?).join('::')
         else
-          ""
+          ''
         end
       end
 
@@ -79,8 +79,8 @@ module Lagoon
         method_names.each do |method_name|
           @callbacks << Callback.new(
             method_name: method_name,
-            only_actions: options.fetch("only", []),
-            except_actions: options.fetch("except", [])
+            only_actions: options.fetch('only', []),
+            except_actions: options.fetch('except', [])
           )
         end
       end

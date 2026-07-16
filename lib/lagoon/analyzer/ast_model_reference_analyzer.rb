@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require "prism"
-require_relative "ast/controller_scope_collector"
-require_relative "ast/method_reference_visitor"
+require 'prism'
+require_relative 'ast/controller_scope_collector'
+require_relative 'ast/method_reference_visitor'
 
 module Lagoon
   module Analyzer
@@ -36,7 +36,7 @@ module Lagoon
         result = Prism.parse_file(file_path)
         return result.value if result.success?
 
-        details = result.errors.map { |error| error.message }.uniq.join("; ")
+        details = result.errors.map(&:message).uniq.join('; ')
         raise ParseError, "Syntax error in #{file_path}: #{details}"
       end
     end
