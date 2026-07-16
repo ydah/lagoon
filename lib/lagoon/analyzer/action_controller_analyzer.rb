@@ -13,7 +13,7 @@ module Lagoon
       def analyze_controller(controller, options = {})
         {
           name: controller.name,
-          abstract: false,
+          abstract: abstract_controller?(controller),
           attributes: [],
           methods: extract_methods(controller, options)
         }
@@ -23,9 +23,10 @@ module Lagoon
       #
       # @param controller [Class] ActionController class
       # @return [Array<Hash>] Inheritance metadata (empty or single element)
-      def extract_inheritance(controller)
-        return [] if controller.superclass == ActionController::Base
+      def extract_inheritance(controller, include_framework_base: false)
+        return [] if controller.superclass == ActionController::Base && !include_framework_base
         return [] unless controller.superclass.name
+        return [] if !include_framework_base && controller.superclass.name.start_with?("ActionController::")
 
         [{
           source: controller.superclass.name,
@@ -33,7 +34,7 @@ module Lagoon
           type: :inheritance,
           label: nil
         }]
-      rescue StandardError
+      rescue NameError
         []
       end
 
@@ -44,23 +45,31 @@ module Lagoon
 
         # Public methods (action methods)
         unless options[:hide_public]
-          public_methods = controller.action_methods.to_a
+          declared_public = controller.public_instance_methods(false).map(&:to_s)
+          public_methods = controller.action_methods.to_a.map(&:to_s) & declared_public
           methods.concat(public_methods.map { |m| { name: m, visibility: "+" } })
         end
 
         # Protected methods
         unless options[:hide_protected]
-          protected_methods = controller.protected_instance_methods(false)
+          protected_methods = controller.protected_instance_methods(false).map(&:to_s)
           methods.concat(protected_methods.map { |m| { name: m, visibility: "#" } })
         end
 
         # Private methods
         unless options[:hide_private]
-          private_methods = controller.private_instance_methods(false)
+          private_methods = controller.private_instance_methods(false).map(&:to_s)
           methods.concat(private_methods.map { |m| { name: m, visibility: "-" } })
         end
 
-        methods
+        methods.sort_by { |method| [method[:visibility], method[:name]] }
+      end
+
+      def abstract_controller?(controller)
+        return controller.abstract? if controller.respond_to?(:abstract?)
+        return controller.abstract_controller? if controller.respond_to?(:abstract_controller?)
+
+        false
       end
     end
   end

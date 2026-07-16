@@ -1,85 +1,77 @@
 # frozen_string_literal: true
 
-require "active_support/core_ext/string"
-
 module Lagoon
   module Analyzer
-    # Analyzes database schema to extract table and column metadata
     class DatabaseSchemaAnalyzer
-      # Analyze a single table and return its metadata
-      #
-      # @param table_name [String] Table name
-      # @param columns [Array] Array of column objects
-      # @return [Hash] Table metadata
-      def analyze_table(table_name, columns)
+      def analyze_table(table_name, columns, primary_keys: [], foreign_keys: [], indexes: [])
+        foreign_key_columns = foreign_keys.flat_map { |foreign_key| Array(foreign_key.column).map(&:to_s) }
+        unique_columns = single_column_unique_indexes(indexes)
+        primary_key_columns = Array(primary_keys).map(&:to_s)
+
         {
           name: table_name,
-          attributes: columns.map { |col| analyze_column(col) }
+          attributes: columns.map do |column|
+            analyze_column(
+              column,
+              primary_keys: primary_key_columns,
+              foreign_keys: foreign_key_columns,
+              unique_columns: unique_columns
+            )
+          end
         }
       end
 
-      # Analyze a single column and return its metadata
-      #
-      # @param column [Object] Column object from ActiveRecord
-      # @return [Hash] Column metadata
-      def analyze_column(column)
+      def analyze_column(column, primary_keys: [], foreign_keys: [], unique_columns: [])
         {
           name: column.name,
           type: column.type,
-          primary_key: column.name == "id",
-          foreign_key: foreign_key?(column.name),
-          unique: false # Can be enhanced with actual unique constraints
+          primary_key: primary_keys.include?(column.name.to_s),
+          foreign_key: foreign_keys.include?(column.name.to_s),
+          unique: unique_columns.include?(column.name.to_s)
         }
       end
 
-      # Extract foreign key relationships from table columns
-      #
-      # @param table_name [String] Table name
-      # @param columns [Array] Array of column objects
-      # @return [Array<Hash>] Foreign key relationship metadata
-      def extract_foreign_keys(table_name, columns)
-        relationships = []
+      def extract_foreign_keys(table_name, columns, foreign_keys:, indexes: [], primary_keys: [], table_prefix: nil)
+        columns_by_name = columns.to_h { |column| [column.name.to_s, column] }
+        unique_columns = single_column_unique_indexes(indexes)
+        primary_key_columns = Array(primary_keys).map(&:to_s)
 
-        columns.each do |column|
-          next unless foreign_key?(column.name)
+        foreign_keys.filter_map do |foreign_key|
+          column_names = Array(foreign_key.column).map(&:to_s)
+          foreign_key_columns = column_names.filter_map { |name| columns_by_name[name] }
+          next if foreign_key_columns.empty?
 
-          # Infer target table from column name (e.g., user_id -> users)
-          target_table = infer_target_table(column.name)
-          next unless target_table
+          unique = column_names.size == 1 && unique_columns.include?(column_names.first)
+          nullable = foreign_key_columns.any? { |column| column.respond_to?(:null) ? column.null : true }
+          identifying = (column_names - primary_key_columns).empty?
 
-          relationships << {
-            source: table_name,
-            target: target_table,
-            label: "has many",
-            source_cardinality: "||",
-            target_cardinality: "}o",
-            identifying: true
+          {
+            source: qualify_table(foreign_key.to_table, table_prefix),
+            target: table_name,
+            label: unique ? "has one" : "has many",
+            source_cardinality: nullable ? :zero_or_one : :one,
+            target_cardinality: unique ? :zero_or_one : :zero_or_many,
+            identifying: identifying,
+            foreign_key: column_names
           }
         end
-
-        relationships
       end
 
-      # Check if a table is an internal Rails table
-      #
-      # @param table_name [String] Table name
-      # @return [Boolean] True if internal table
-      def internal_table?(table_name)
-        %w[schema_migrations ar_internal_metadata].include?(table_name)
+      def internal_table?(table_name, internal_tables: %w[schema_migrations ar_internal_metadata])
+        internal_tables.include?(table_name.to_s)
       end
 
       private
 
-      def foreign_key?(column_name)
-        column_name.end_with?("_id")
+      def single_column_unique_indexes(indexes)
+        indexes.select { |index| index.unique && Array(index.columns).size == 1 }
+               .map { |index| Array(index.columns).first.to_s }
       end
 
-      def infer_target_table(foreign_key_name)
-        # Infer: user_id -> users
-        base_name = foreign_key_name.sub(/_id$/, "")
-        base_name.pluralize
-      rescue StandardError
-        nil
+      def qualify_table(table_name, prefix)
+        return table_name.to_s unless prefix
+
+        "#{prefix}.#{table_name}"
       end
     end
   end

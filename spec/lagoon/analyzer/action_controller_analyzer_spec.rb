@@ -11,6 +11,7 @@ RSpec.describe Lagoon::Analyzer::ActionControllerAnalyzer do
       double("Controller",
              name: "UsersController",
              action_methods: %w[index show create update destroy].to_set,
+             public_instance_methods: %i[index show create update destroy],
              protected_instance_methods: [:authenticate, :set_user],
              private_instance_methods: [:user_params, :find_user])
     end
@@ -37,7 +38,7 @@ RSpec.describe Lagoon::Analyzer::ActionControllerAnalyzer do
 
       protected_methods = result[:methods].select { |m| m[:visibility] == "#" }
       expect(protected_methods.size).to eq(2)
-      expect(protected_methods.map { |m| m[:name] }).to include(:authenticate, :set_user)
+      expect(protected_methods.map { |m| m[:name] }).to include("authenticate", "set_user")
     end
 
     it "extracts private methods" do
@@ -45,7 +46,7 @@ RSpec.describe Lagoon::Analyzer::ActionControllerAnalyzer do
 
       private_methods = result[:methods].select { |m| m[:visibility] == "-" }
       expect(private_methods.size).to eq(2)
-      expect(private_methods.map { |m| m[:name] }).to include(:user_params, :find_user)
+      expect(private_methods.map { |m| m[:name] }).to include("user_params", "find_user")
     end
 
     it "hides public methods when hide_public is true" do
@@ -133,13 +134,11 @@ RSpec.describe Lagoon::Analyzer::ActionControllerAnalyzer do
       expect(result).to be_empty
     end
 
-    it "handles errors gracefully" do
+    it "does not hide unexpected implementation errors" do
       mock_controller = double("Controller", name: "UsersController")
       allow(mock_controller).to receive(:superclass).and_raise(StandardError)
 
-      result = analyzer.extract_inheritance(mock_controller)
-
-      expect(result).to be_empty
+      expect { analyzer.extract_inheritance(mock_controller) }.to raise_error(StandardError)
     end
   end
 end

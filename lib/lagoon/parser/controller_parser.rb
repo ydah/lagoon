@@ -6,9 +6,9 @@ module Lagoon
       attr_reader :options, :config
 
       def initialize(options = {})
-        @options = options
-        @config = Lagoon.configuration
+        @options = options.is_a?(Options) ? options : Options.for(:controller, options)
         @analyzer = Lagoon::Analyzer::ActionControllerAnalyzer.new
+        @filter = ApplicationClassFilter.new(directory: "controllers", include_all: @options[:all_controllers])
       end
 
       def parse
@@ -16,36 +16,53 @@ module Lagoon
         classes = []
         relationships = []
 
-        controllers.each do |controller|
+        warnings = []
+
+        controllers.sort_by { |controller| controller.name.to_s }.each do |controller|
           next if excluded?(controller)
 
-          # Use analyzer to extract controller metadata
           controller_data = @analyzer.analyze_controller(controller, analysis_options)
           classes << controller_data
 
-          # Use analyzer to extract inheritance
-          relationships.concat(@analyzer.extract_inheritance(controller)) if config.include_inheritance
+          if options[:include_inheritance]
+            relationships.concat(
+              @analyzer.extract_inheritance(
+                controller,
+                include_framework_base: options[:include_framework_bases]
+              )
+            )
+          end
+        rescue StandardError => e
+          raise if options[:strict]
+
+          warnings << "Failed to analyze controller #{controller.name || '(anonymous)'}: #{e.message}"
         end
 
         {
-          classes: classes,
-          relationships: relationships
+          classes: classes.sort_by { |controller| controller[:name] },
+          relationships: relationships.sort_by { |relationship| [relationship[:source], relationship[:target]] },
+          warnings: warnings,
+          counts: { classes: classes.size, relationships: relationships.size, skipped: warnings.size }
         }
       end
 
       private
 
       def load_controllers
-        # Load all Rails controllers
-        return [] unless defined?(Rails)
+        return [] unless defined?(ActionController::Base)
 
-        Rails.application.eager_load!
+        Rails.application.eager_load! if options[:eager_load] && defined?(Rails)
         ActionController::Base.descendants
       end
 
       def excluded?(controller)
         controller_name = controller.name
-        config.exclude_controllers.include?(controller_name)
+        return true unless controller_name
+        return true unless @filter.include?(controller)
+        return true if options[:exclude].include?(controller_name)
+        return !options[:specify].include?(controller_name) if options[:specify].any?
+
+        false
       end
 
       def analysis_options

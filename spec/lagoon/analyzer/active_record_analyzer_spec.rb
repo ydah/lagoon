@@ -31,15 +31,15 @@ RSpec.describe Lagoon::Analyzer::ActiveRecordAnalyzer do
     it "extracts columns when table exists" do
       result = analyzer.analyze_model(mock_model)
 
-      expect(result[:attributes].size).to eq(2) # Only non-magic fields (name, email)
-      expect(result[:attributes].map { |a| a[:name] }).to include("name", "email")
+      expect(result[:attributes].size).to eq(4)
+      expect(result[:attributes].map { |a| a[:name] }).to include("id", "name", "email", "created_at")
     end
 
-    it "includes magic fields when all_columns is true" do
-      result = analyzer.analyze_model(mock_model, all_columns: true)
+    it "hides magic fields only when hide_magic is true" do
+      result = analyzer.analyze_model(mock_model, hide_magic: true)
 
-      expect(result[:attributes].size).to eq(4) # All fields including id, created_at
-      expect(result[:attributes].map { |a| a[:name] }).to include("id", "created_at")
+      expect(result[:attributes].size).to eq(2)
+      expect(result[:attributes].map { |a| a[:name] }).to contain_exactly("email", "name")
     end
 
     it "returns empty attributes when table doesn't exist" do
@@ -187,7 +187,7 @@ RSpec.describe Lagoon::Analyzer::ActiveRecordAnalyzer do
       expect(result).to be_empty
     end
 
-    it "returns empty array when superclass is abstract" do
+    it "keeps inheritance through an abstract application base" do
       abstract_superclass = double("Superclass", name: "ApplicationRecord", abstract_class?: true)
       mock_model = double("Model",
                           name: "User",
@@ -196,16 +196,14 @@ RSpec.describe Lagoon::Analyzer::ActiveRecordAnalyzer do
 
       result = analyzer.extract_inheritance(mock_model)
 
-      expect(result).to be_empty
+      expect(result.first).to include(source: "ApplicationRecord", target: "User")
     end
 
-    it "handles errors gracefully" do
+    it "does not hide unexpected implementation errors" do
       mock_model = double("Model", name: "User")
       allow(mock_model).to receive(:superclass).and_raise(StandardError)
 
-      result = analyzer.extract_inheritance(mock_model)
-
-      expect(result).to be_empty
+      expect { analyzer.extract_inheritance(mock_model) }.to raise_error(StandardError)
     end
   end
 end

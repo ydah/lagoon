@@ -138,7 +138,7 @@ module Lagoon
         exclude: names(@config.exclude_tables, @raw[:exclude]),
         specify: names(@raw[:specify]),
         connections: @raw[:connections],
-        internal_tables: names(@config.internal_tables, @raw[:internal_tables])
+        internal_tables: names(@raw.fetch(:internal_tables, @config.internal_tables))
       }
     end
 

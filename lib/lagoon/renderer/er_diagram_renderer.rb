@@ -35,10 +35,8 @@ module Lagoon
           constraints << "UK" if attr[:unique]
 
           line = "        #{safe_identifier(type)} #{safe_identifier(attr[:name])}"
-          if safe_identifier(attr[:name]) != attr[:name].to_s
-            line += " #{mermaid_string(attr[:name])}"
-          end
           line += " #{constraints.join(" ")}" if constraints.any?
+          line += " #{mermaid_string(attr[:name])}" if safe_identifier(attr[:name]) != attr[:name].to_s
           lines << line
         end
         lines << "    }"

@@ -1,142 +1,98 @@
 # frozen_string_literal: true
 
-require "spec_helper"
-require_relative "../../../lib/lagoon/analyzer/database_schema_analyzer"
-
 RSpec.describe Lagoon::Analyzer::DatabaseSchemaAnalyzer do
   subject(:analyzer) { described_class.new }
 
-  describe "#analyze_table" do
-    let(:columns) do
-      [
-        double("Column", name: "id", type: :integer),
-        double("Column", name: "name", type: :string),
-        double("Column", name: "email", type: :string),
-        double("Column", name: "user_id", type: :integer),
-        double("Column", name: "created_at", type: :datetime)
-      ]
-    end
-
-    it "extracts table metadata" do
-      result = analyzer.analyze_table("users", columns)
-
-      expect(result[:name]).to eq("users")
-      expect(result[:attributes]).to be_an(Array)
-      expect(result[:attributes].size).to eq(5)
-    end
-
-    it "extracts column metadata" do
-      result = analyzer.analyze_table("users", columns)
-
-      name_col = result[:attributes].find { |a| a[:name] == "name" }
-      expect(name_col[:type]).to eq(:string)
-      expect(name_col[:primary_key]).to be false
-      expect(name_col[:foreign_key]).to be false
-    end
-
-    it "marks id column as primary key" do
-      result = analyzer.analyze_table("users", columns)
-
-      id_col = result[:attributes].find { |a| a[:name] == "id" }
-      expect(id_col[:primary_key]).to be true
-    end
-
-    it "marks _id columns as foreign keys" do
-      result = analyzer.analyze_table("posts", columns)
-
-      user_id_col = result[:attributes].find { |a| a[:name] == "user_id" }
-      expect(user_id_col[:foreign_key]).to be true
-    end
+  let(:columns) do
+    [
+      double("Column", name: "uuid", type: :uuid, null: false),
+      double("Column", name: "creator_id", type: :integer, null: false),
+      double("Column", name: "legacy_id", type: :integer, null: true),
+      double("Column", name: "slug", type: :string, null: false)
+    ]
   end
+  let(:foreign_key) { double("ForeignKey", column: "creator_id", to_table: "users") }
+  let(:unique_index) { double("Index", unique: true, columns: ["slug"]) }
 
-  describe "#analyze_column" do
-    it "extracts column metadata" do
-      column = double("Column", name: "email", type: :string)
-
-      result = analyzer.analyze_column(column)
-
-      expect(result[:name]).to eq("email")
-      expect(result[:type]).to eq(:string)
-      expect(result[:primary_key]).to be false
-      expect(result[:foreign_key]).to be false
-      expect(result[:unique]).to be false
+  describe "#analyze_table" do
+    subject(:table) do
+      analyzer.analyze_table(
+        "posts",
+        columns,
+        primary_keys: ["uuid"],
+        foreign_keys: [foreign_key],
+        indexes: [unique_index]
+      )
     end
 
-    it "identifies primary key column" do
-      column = double("Column", name: "id", type: :integer)
+    it "uses actual primary key, foreign key, and unique metadata" do
+      attributes = table[:attributes].to_h { |attribute| [attribute[:name], attribute] }
 
-      result = analyzer.analyze_column(column)
-
-      expect(result[:primary_key]).to be true
+      expect(attributes["uuid"][:primary_key]).to be true
+      expect(attributes["creator_id"][:foreign_key]).to be true
+      expect(attributes["slug"][:unique]).to be true
     end
 
-    it "identifies foreign key column" do
-      column = double("Column", name: "user_id", type: :integer)
+    it "does not infer foreign keys from an _id suffix" do
+      legacy_id = table[:attributes].find { |attribute| attribute[:name] == "legacy_id" }
 
-      result = analyzer.analyze_column(column)
-
-      expect(result[:foreign_key]).to be true
+      expect(legacy_id[:foreign_key]).to be false
     end
   end
 
   describe "#extract_foreign_keys" do
-    let(:columns) do
-      [
-        double("Column", name: "id", type: :integer),
-        double("Column", name: "user_id", type: :integer),
-        double("Column", name: "category_id", type: :integer),
-        double("Column", name: "name", type: :string)
-      ]
+    it "orients a required one-to-many relationship from parent to child" do
+      relationship = analyzer.extract_foreign_keys(
+        "posts",
+        columns,
+        foreign_keys: [foreign_key],
+        indexes: [],
+        primary_keys: ["uuid"]
+      ).first
+
+      expect(relationship).to include(
+        source: "users",
+        target: "posts",
+        source_cardinality: :one,
+        target_cardinality: :zero_or_many,
+        identifying: false
+      )
     end
 
-    it "extracts foreign key relationships" do
-      result = analyzer.extract_foreign_keys("posts", columns)
+    it "uses nullability and a unique index for an optional one-to-one relationship" do
+      optional_fk = double("ForeignKey", column: "legacy_id", to_table: "legacy_records")
+      unique_fk = double("Index", unique: true, columns: ["legacy_id"])
 
-      expect(result.size).to eq(2)
+      relationship = analyzer.extract_foreign_keys(
+        "posts",
+        columns,
+        foreign_keys: [optional_fk],
+        indexes: [unique_fk]
+      ).first
+
+      expect(relationship).to include(
+        source_cardinality: :zero_or_one,
+        target_cardinality: :zero_or_one,
+        label: "has one"
+      )
     end
 
-    it "infers target table from foreign key name" do
-      result = analyzer.extract_foreign_keys("posts", columns)
+    it "supports custom foreign key names and database prefixes" do
+      relationship = analyzer.extract_foreign_keys(
+        "primary.posts",
+        columns,
+        foreign_keys: [foreign_key],
+        table_prefix: "primary"
+      ).first
 
-      user_rel = result.find { |r| r[:target] == "users" }
-      expect(user_rel).not_to be_nil
-      expect(user_rel[:source]).to eq("posts")
-      expect(user_rel[:label]).to eq("has many")
-    end
-
-    it "sets correct cardinality" do
-      result = analyzer.extract_foreign_keys("posts", columns)
-
-      rel = result.first
-      expect(rel[:source_cardinality]).to eq("||")
-      expect(rel[:target_cardinality]).to eq("}o")
-      expect(rel[:identifying]).to be true
-    end
-
-    it "returns empty array when no foreign keys" do
-      simple_columns = [
-        double("Column", name: "id", type: :integer),
-        double("Column", name: "name", type: :string)
-      ]
-
-      result = analyzer.extract_foreign_keys("users", simple_columns)
-
-      expect(result).to be_empty
+      expect(relationship).to include(source: "primary.users", target: "primary.posts")
     end
   end
 
   describe "#internal_table?" do
-    it "identifies schema_migrations as internal" do
-      expect(analyzer.internal_table?("schema_migrations")).to be true
-    end
-
-    it "identifies ar_internal_metadata as internal" do
-      expect(analyzer.internal_table?("ar_internal_metadata")).to be true
-    end
-
-    it "returns false for user tables" do
-      expect(analyzer.internal_table?("users")).to be false
-      expect(analyzer.internal_table?("posts")).to be false
+    it "uses a configurable list" do
+      expect(analyzer.internal_table?("audit_metadata", internal_tables: ["audit_metadata"])).to be true
+      expect(analyzer.internal_table?("schema_migrations", internal_tables: [])).to be false
     end
   end
 end
