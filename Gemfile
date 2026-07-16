@@ -6,8 +6,12 @@ source "https://rubygems.org"
 gemspec
 
 gem "irb"
+gem "actionpack", ">= 6.1"
+gem "activerecord", ">= 6.1"
 gem "rake", "~> 13.0"
+gem "railties", ">= 6.1"
 gem "rspec", "~> 3.0"
+gem "sqlite3", ">= 1.4"
 
 group :development, :test do
   gem "appraisal", "~> 2.5"
